@@ -140,7 +140,7 @@ body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M3 11h18"/></svg>Scan Folder
   </button>
   <button class="btn" id="btnCloud" style="background:transparent;color:#60a5fa;border-color:#60a5fa50">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>Cloud
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>Cloud Folder
   </button>
   <button class="btn bp" id="btnGtiff">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>GeoTIFF
@@ -269,85 +269,76 @@ body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height
   </div>
 </div>
 
-<!-- R2 Cloud Browser Modal -->
-<div id="r2-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9400;align-items:center;justify-content:center">
-  <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;width:680px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
-    <!-- Modal header -->
+<!-- Cloud Folder Modal -->
+<div id="cloud-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9400;align-items:center;justify-content:center">
+  <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;width:580px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #30363d;flex-shrink:0">
-      <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-        <span style="font-size:13px;font-weight:600">R2 Cloud Storage</span>
-        <span id="r2-bucket-label" style="font-size:10px;color:#7d8590;background:#0d1117;padding:2px 8px;border-radius:10px;border:1px solid #30363d">mapshot-images</span>
+        <span style="font-size:13px;font-weight:600">Cloud Folder</span>
       </div>
-      <button id="r2-close" style="background:transparent;border:none;color:#7d8590;cursor:pointer;font-size:16px">✕</button>
+      <button id="cloud-close" style="background:transparent;border:none;color:#7d8590;cursor:pointer;font-size:16px">✕</button>
     </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1">
 
-    <!-- Tabs -->
-    <div style="display:flex;border-bottom:1px solid #30363d;flex-shrink:0">
-      <button class="r2tab on" id="r2tab-browse" style="padding:8px 16px;background:transparent;border:none;border-bottom:2px solid #60a5fa;color:#60a5fa;font-family:inherit;font-size:11px;cursor:pointer">Browse</button>
-      <button class="r2tab" id="r2tab-upload" style="padding:8px 16px;background:transparent;border:none;border-bottom:2px solid transparent;color:#7d8590;font-family:inherit;font-size:11px;cursor:pointer">Upload</button>
-      <button class="r2tab" id="r2tab-settings" style="padding:8px 16px;background:transparent;border:none;border-bottom:2px solid transparent;color:#7d8590;font-family:inherit;font-size:11px;cursor:pointer">Settings</button>
-    </div>
+      <!-- Provider tabs -->
+      <div style="display:flex;gap:6px">
+        <button class="cloud-tab on" id="ctab-gdrive" style="flex:1;padding:8px;border-radius:5px;border:1px solid #30363d;background:#1c2128;color:#e6edf3;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-7l-2 3H9l-2-3H0"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+          Google Drive
+        </button>
+        <button class="cloud-tab" id="ctab-onedrive" style="flex:1;padding:8px;border-radius:5px;border:1px solid #30363d;background:transparent;color:#7d8590;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          OneDrive
+        </button>
+      </div>
 
-    <!-- Browse tab -->
-    <div id="r2-browse" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-      <div style="padding:8px 12px;border-bottom:1px solid #30363d;display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <span id="r2-path" style="font-size:11px;color:#7d8590;flex:1">📁 /</span>
-        <button id="r2-up" style="background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:3px 8px">↑ Up</button>
-        <button id="r2-refresh" style="background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:3px 8px">↻ Refresh</button>
-        <button id="r2-load-selected" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:4px;font-family:inherit;font-size:10px;cursor:pointer;padding:3px 10px;display:none">Load Selected</button>
+      <!-- Instructions -->
+      <div id="cloud-instructions" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:12px;font-size:11px;color:#7d8590;line-height:1.7">
+        <strong style="color:#e6edf3;display:block;margin-bottom:6px">How to get a shareable folder link:</strong>
+        <div id="instr-gdrive">
+          1. Open <strong style="color:#e6edf3">Google Drive</strong> and right-click your folder<br>
+          2. Click <strong style="color:#e6edf3">Share → Anyone with the link → Viewer</strong><br>
+          3. Click <strong style="color:#e6edf3">Copy link</strong> and paste it below
+        </div>
+        <div id="instr-onedrive" style="display:none">
+          1. Open <strong style="color:#e6edf3">OneDrive</strong> and right-click your folder<br>
+          2. Click <strong style="color:#e6edf3">Share → Anyone with the link</strong><br>
+          3. Click <strong style="color:#e6edf3">Copy</strong> and paste it below
+        </div>
       </div>
-      <div id="r2-file-list" style="flex:1;overflow-y:auto;padding:6px"></div>
-      <div id="r2-selection-bar" style="display:none;padding:8px 12px;border-top:1px solid #30363d;font-size:11px;color:#7d8590;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-        <span id="r2-sel-count">0 selected</span>
-        <button id="r2-load-sel-bar" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;padding:4px 14px">Load Images</button>
-      </div>
-    </div>
 
-    <!-- Upload tab -->
-    <div id="r2-upload" style="flex:1;overflow:hidden;display:none;flex-direction:column;padding:16px;gap:12px">
-      <div id="r2-dropzone" style="border:2px dashed #30363d;border-radius:8px;padding:40px;text-align:center;color:#7d8590;font-size:12px;cursor:pointer;transition:border-color .15s">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin:0 auto 12px;display:block;opacity:.4"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Drop images here or click to select<br>
-        <span style="font-size:10px;opacity:.6">JPG · TIFF · HEIC — uploaded to your R2 bucket</span>
+      <!-- URL input -->
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.06em">Shared Folder URL</label>
+        <div style="display:flex;gap:6px">
+          <input id="cloud-url" type="text" placeholder="Paste your shared folder link here…" style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:7px 10px;outline:none">
+          <button id="cloud-go" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;padding:7px 14px;white-space:nowrap">Browse →</button>
+        </div>
+        <!-- Saved folders -->
+        <div id="cloud-saved" style="display:none;flex-direction:column;gap:3px;margin-top:2px"></div>
       </div>
-      <div id="r2-upload-dest" style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:11px;color:#7d8590;white-space:nowrap">Upload to folder:</span>
-        <input id="r2-folder-input" type="text" placeholder="e.g. Survey2024/Flight1" style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:4px 8px;outline:none">
-      </div>
-      <div id="r2-upload-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
-    </div>
 
-    <!-- Settings tab -->
-    <div id="r2-settings" style="flex:1;overflow:auto;display:none;padding:16px;gap:12px;flex-direction:column">
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <label style="font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.06em">Account ID</label>
-          <input class="r2-setting" id="r2-account-id" type="text" placeholder="Cloudflare Account ID" style="background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:6px 8px;outline:none">
+      <!-- File list -->
+      <div id="cloud-filelist" style="display:none;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span id="cloud-folder-name" style="font-size:11px;font-weight:600;color:#e6edf3"></span>
+          <span id="cloud-file-count" style="font-size:10px;color:#7d8590"></span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <label style="font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.06em">Access Key ID</label>
-          <input class="r2-setting" id="r2-access-key" type="text" placeholder="Access Key ID" style="background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:6px 8px;outline:none">
+        <div id="cloud-items" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;background:#0d1117;border:1px solid #30363d;border-radius:5px;padding:6px"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button id="cloud-sel-all" style="background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:4px 10px">Select All</button>
+          <button id="cloud-sel-gps" style="background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:4px 10px">GPS Only</button>
+          <div style="flex:1"></div>
+          <button id="cloud-load-sel" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;padding:4px 14px;display:none">Load Selected</button>
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <label style="font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.06em">Secret Access Key</label>
-          <input class="r2-setting" id="r2-secret-key" type="password" placeholder="Secret Access Key" style="background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:6px 8px;outline:none">
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <label style="font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.06em">Bucket Name</label>
-          <input class="r2-setting" id="r2-bucket-name" type="text" placeholder="mapshot-images" style="background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:6px 8px;outline:none">
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <label style="font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.06em">Public Bucket URL</label>
-          <input class="r2-setting" id="r2-public-url" type="text" placeholder="https://pub-xxx.r2.dev" style="background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:6px 8px;outline:none">
-        </div>
-        <button id="r2-save-settings" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:5px;font-family:inherit;font-size:12px;cursor:pointer;padding:8px;margin-top:4px">Save Settings</button>
-        <div id="r2-settings-status" style="font-size:11px;color:#7d8590;text-align:center"></div>
       </div>
+
+      <!-- Status -->
+      <div id="cloud-status" style="font-size:11px;color:#7d8590;text-align:center;min-height:16px"></div>
     </div>
   </div>
 </div>
-
 <div id="lb">
   <button id="lbclose">✕</button>
   <div id="lbcount"></div>
@@ -1419,344 +1410,264 @@ document.onmouseup = () => {
   if (resizing) { resizing = false; document.body.style.cursor = ''; map.invalidateSize(); }
 };
 
-// ── R2 Cloud Storage ──────────────────────────────────────────────────────────
-const R2_DEFAULTS = {
-  accountId: '7f919abbe7ce4ab9adbeed0a9156a37c',
-  accessKey: '0a3f0ca5e172bcd7dc12d28ae7ac7818',
-  secretKey: '0fce0beac0dcc5256e75b52f631a6019b65b98b4ca9998088b01cebfde0dce87',
-  bucket:    'mapshot-images',
-  publicUrl: 'https://pub-7f919abbe7ce4ab9adbeed0a9156a37c.r2.dev'
-};
+// ── Cloud Folder (Google Drive / OneDrive) ───────────────────────────────────
+const CLOUD_STORAGE_KEY = 'mapshot_cloud_folders';
+let cloudProvider = 'gdrive';
+let cloudSelectedFiles = new Set();
+let cloudFileIndex = []; // [{name, url, previewUrl}]
 
-// Load saved settings or use defaults
-function loadR2Config() {
+// Load/save recent folder URLs
+function loadSavedFolders() {
+  try { return JSON.parse(localStorage.getItem(CLOUD_STORAGE_KEY) || '[]'); } catch { return []; }
+}
+function saveFolderUrl(url) {
+  let saved = loadSavedFolders().filter(u => u !== url);
+  saved.unshift(url);
+  saved = saved.slice(0, 5); // keep last 5
+  localStorage.setItem(CLOUD_STORAGE_KEY, JSON.stringify(saved));
+}
+
+// Parse Google Drive folder ID from share URL
+function parseGDriveFolderId(url) {
+  const m = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+// Parse OneDrive share URL into a usable API URL
+function parseOneDriveUrl(url) {
+  // OneDrive share links: https://1drv.ms/... or https://onedrive.live.com/...
+  return url;
+}
+
+// Fetch Google Drive folder contents via public API
+async function fetchGDriveFolder(folderId) {
+  // Use Google Drive's public sharing API - no auth needed for public folders
+  const apiUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'&key=AIzaSyD-placeholder&fields=files(id,name,mimeType,size,thumbnailLink,webContentLink)&pageSize=200`;
+  
+  // Since we can't use the API without a key, use the public folder embed approach
+  // Fetch the folder's HTML page and extract file info
+  const embedUrl = `https://drive.google.com/embeddedfolderview?id=${folderId}#list`;
+  
   try {
-    const saved = JSON.parse(localStorage.getItem('mapshot_r2') || '{}');
-    return { ...R2_DEFAULTS, ...saved };
-  } catch { return R2_DEFAULTS; }
-}
-function saveR2Config(cfg) {
-  localStorage.setItem('mapshot_r2', JSON.stringify(cfg));
-}
-
-let r2Config = loadR2Config();
-let r2CurrentPrefix = '';
-let r2Selected = new Set(); // selected file keys
-
-function r2Endpoint() {
-  return `https://${r2Config.accountId}.r2.cloudflarestorage.com`;
-}
-
-// Sign a request using AWS Signature Version 4
-async function r2SignedFetch(method, pathAndQuery, body=null, extraHeaders={}) {
-  const baseUrl = `${r2Endpoint()}/${r2Config.bucket}`;
-  const [path, qs=''] = pathAndQuery.split('?');
-  const url = baseUrl + path + (qs ? '?'+qs : '');
-
-  const now = new Date();
-  const datestamp = now.toISOString().slice(0,10).replace(/-/g,'');
-  const timestamp = now.toISOString().replace(/[:-]/g,'').slice(0,15)+'Z';
-  const region = 'auto', service = 's3';
-
-  const payloadHash = body instanceof ArrayBuffer
-    ? await sha256hex(new Uint8Array(body))
-    : 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-
-  const host = `${r2Config.accountId}.r2.cloudflarestorage.com`;
-  const headers = {
-    'host': host,
-    'x-amz-date': timestamp,
-    'x-amz-content-sha256': payloadHash,
-    ...extraHeaders
-  };
-
-  const sortedHeaders = Object.keys(headers).sort();
-  const signedHeaders = sortedHeaders.join(';');
-  const canonicalHeaders = sortedHeaders.map(k=>`${k}:${headers[k]}\n`).join('');
-
-  // Sort query string params for canonical request
-  const sortedQs = qs ? [...new URLSearchParams(qs).entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&') : '';
-
-  const canonicalRequest = [method, path||'/', sortedQs, canonicalHeaders, signedHeaders, payloadHash].join('\n');
-  const credentialScope = `${datestamp}/${region}/${service}/aws4_request`;
-  const stringToSign = `AWS4-HMAC-SHA256\n${timestamp}\n${credentialScope}\n${await sha256hex(canonicalRequest)}`;
-  const signingKey = await getSigningKey(r2Config.secretKey, datestamp, region, service);
-  const signature = await hmacHex(signingKey, stringToSign);
-
-  const authHeader = `AWS4-HMAC-SHA256 Credential=${r2Config.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-  const fetchHeaders = {};
-  sortedHeaders.forEach(k => { if(k!=='host') fetchHeaders[k]=headers[k]; });
-  fetchHeaders['Authorization'] = authHeader;
-
-  return fetch(url, { method, headers: fetchHeaders, body: body instanceof ArrayBuffer ? body : null });
-}
-
-async function sha256hex(msg) {
-  const data = typeof msg === 'string' ? new TextEncoder().encode(msg) : msg;
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function hmac(key, msg) {
-  const k = typeof key === 'string' ? new TextEncoder().encode(key) : key;
-  const m = typeof msg === 'string' ? new TextEncoder().encode(msg) : msg;
-  const cryptoKey = await crypto.subtle.importKey('raw', k, {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-  return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, m));
-}
-
-async function hmacHex(key, msg) {
-  const result = await hmac(key, msg);
-  return Array.from(result).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function getSigningKey(secret, date, region, service) {
-  const kDate    = await hmac('AWS4'+secret, date);
-  const kRegion  = await hmac(kDate, region);
-  const kService = await hmac(kRegion, service);
-  return hmac(kService, 'aws4_request');
-}
-
-// List objects in bucket with optional prefix
-async function r2List(prefix='') {
-  const params = new URLSearchParams();
-  params.set('list-type', '2');
-  params.set('delimiter', '/');
-  if (prefix) params.set('prefix', prefix);
-  const res = await r2SignedFetch('GET', `?${params.toString()}`);
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`R2 list failed: ${res.status} — ${txt.slice(0,200)}`);
+    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(embedUrl)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    return parseGDriveFolderHTML(html, folderId);
+  } catch(e) {
+    throw new Error('Could not fetch folder. Make sure sharing is set to "Anyone with the link".');
   }
-  const xml = await res.text();
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xml, 'text/xml');
-  const folders = [...doc.querySelectorAll('CommonPrefixes Prefix')].map(el => el.textContent);
-  const files   = [...doc.querySelectorAll('Contents')].map(el => ({
-    key:  el.querySelector('Key').textContent,
-    size: +el.querySelector('Size').textContent,
-    lastModified: el.querySelector('LastModified').textContent
-  })).filter(f => /\.(jpe?g|tiff?|heic)$/i.test(f.key));
-  return { folders, files };
 }
 
-// Upload a file to R2
-async function r2Upload(file, key) {
-  const contentType = file.type || 'application/octet-stream';
-  const buf = await file.arrayBuffer();
-  const res = await r2SignedFetch('PUT', `/${key}`, buf, { 'content-type': contentType, 'content-length': String(buf.byteLength) });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-  return `${r2Config.publicUrl}/${key}`;
+function parseGDriveFolderHTML(html, folderId) {
+  const files = [];
+  // Extract file entries from Google Drive folder embed HTML
+  const regex = /\["([a-zA-Z0-9_-]{25,})","([^"]+\.(jpg|jpeg|tiff?|heic))"/gi;
+  let m;
+  while ((m = regex.exec(html)) !== null) {
+    const fileId = m[1], name = m[2];
+    files.push({
+      name,
+      url: `https://drive.google.com/uc?export=download&id=${fileId}`,
+      previewUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`,
+      fileId
+    });
+  }
+  return files;
 }
 
-// Load image from R2 public URL into MapShot
-async function loadFromR2Url(url, key) {
+async function fetchOneDriveFolder(shareUrl) {
+  // Convert OneDrive share URL to API URL
+  // For public folders shared as "Anyone with the link"
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+    // Encode the share URL for the API
+    const encoded = btoa(shareUrl).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    const apiUrl = `https://api.onedrive.com/v1.0/shares/u!${encoded}/root/children?$filter=startsWith(file/mimeType,'image/')&$select=name,id,@microsoft.graph.downloadUrl,thumbnails`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return (data.value || [])
+      .filter(f => /\.(jpe?g|tiff?|heic)$/i.test(f.name))
+      .map(f => ({
+        name: f.name,
+        url: f['@microsoft.graph.downloadUrl'],
+        previewUrl: f.thumbnails?.[0]?.small?.url || null
+      }));
+  } catch(e) {
+    throw new Error('Could not fetch OneDrive folder. Make sure sharing is set to "Anyone with the link".');
+  }
+}
+
+function setCloudStatus(msg, col='#7d8590') {
+  const el = document.getElementById('cloud-status');
+  el.textContent = msg; el.style.color = col;
+}
+
+function renderSavedFolders() {
+  const saved = loadSavedFolders();
+  const container = document.getElementById('cloud-saved');
+  if (!saved.length) { container.style.display='none'; return; }
+  container.style.display='flex';
+  container.innerHTML = `<div style="font-size:10px;color:#7d8590;margin-bottom:2px">Recent:</div>`;
+  saved.forEach(url => {
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:3px;cursor:pointer;background:#0d1117;border:1px solid #30363d';
+    row.innerHTML=`<span style="font-size:10px;color:#60a5fa;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${url}</span>`;
+    row.onclick=()=>{ document.getElementById('cloud-url').value=url; browseCloudFolder(); };
+    container.appendChild(row);
+  });
+}
+
+async function browseCloudFolder() {
+  const url = document.getElementById('cloud-url').value.trim();
+  if (!url) { setCloudStatus('Paste a folder link first', '#f85149'); return; }
+
+  setCloudStatus('Fetching folder contents…');
+  document.getElementById('cloud-filelist').style.display='none';
+  cloudFileIndex = []; cloudSelectedFiles.clear();
+
+  try {
+    let files = [];
+    if (cloudProvider === 'gdrive') {
+      const folderId = parseGDriveFolderId(url);
+      if (!folderId) throw new Error('Not a valid Google Drive folder URL');
+      files = await fetchGDriveFolder(folderId);
+    } else {
+      files = await fetchOneDriveFolder(url);
+    }
+
+    if (!files.length) {
+      setCloudStatus('No images found in this folder. Check the link and sharing settings.', '#f0883e');
+      return;
+    }
+
+    cloudFileIndex = files;
+    saveFolderUrl(url);
+    renderSavedFolders();
+    renderCloudFiles(files);
+    setCloudStatus('');
+
+  } catch(e) {
+    setCloudStatus(e.message, '#f85149');
+  }
+}
+
+function renderCloudFiles(files) {
+  const container = document.getElementById('cloud-items');
+  const fileList = document.getElementById('cloud-filelist');
+  container.innerHTML = '';
+  cloudSelectedFiles.clear();
+  document.getElementById('cloud-load-sel').style.display='none';
+  document.getElementById('cloud-folder-name').textContent = `${files.length} images found`;
+  document.getElementById('cloud-file-count').textContent = '';
+  fileList.style.display='flex';
+
+  files.forEach((file, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;border:1px solid transparent;cursor:pointer';
+    
+    const cb = document.createElement('input');
+    cb.type='checkbox'; cb.style.cssText='width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:#60a5fa';
+
+    const thumb = document.createElement('img');
+    thumb.style.cssText='width:34px;height:34px;object-fit:cover;border-radius:3px;background:#0d1117;flex-shrink:0';
+    if (file.previewUrl) { thumb.src=file.previewUrl; thumb.onerror=()=>thumb.style.opacity='.2'; }
+    else thumb.style.opacity='.2';
+
+    const name = document.createElement('div');
+    name.style.cssText='flex:1;font-size:11px;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    name.textContent = file.name;
+
+    const loadBtn = document.createElement('button');
+    loadBtn.textContent='Load';
+    loadBtn.style.cssText='background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:2px 8px;flex-shrink:0';
+    loadBtn.onclick=async(e)=>{ e.stopPropagation(); loadBtn.textContent='…'; await loadCloudImage(file); loadBtn.textContent='✓'; };
+
+    const toggle = () => {
+      cb.checked=!cb.checked;
+      if(cb.checked){ cloudSelectedFiles.add(idx); row.style.borderColor='#60a5fa'; row.style.background='#1c2128'; }
+      else{ cloudSelectedFiles.delete(idx); row.style.borderColor='transparent'; row.style.background=''; }
+      document.getElementById('cloud-load-sel').style.display=cloudSelectedFiles.size>0?'inline-flex':'none';
+      document.getElementById('cloud-file-count').textContent=cloudSelectedFiles.size>0?`${cloudSelectedFiles.size} selected`:'';
+    };
+
+    cb.onclick=e=>{e.stopPropagation();toggle();};
+    row.onclick=toggle;
+
+    row.appendChild(cb); row.appendChild(thumb); row.appendChild(name); row.appendChild(loadBtn);
+    container.appendChild(row);
+  });
+}
+
+async function loadCloudImage(file) {
+  try {
+    setCloudStatus(`Loading ${file.name}…`);
+    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(file.url)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const blob = await res.blob();
-    // Create a File-like object
-    const filename = key.split('/').pop();
-    const file = new File([blob], filename, { type: blob.type });
-    file._r2Key = key;
-    file._r2Url = url;
-    const gps = await getGPS(file);
-    const thumb = await mkThumb(file);
-    if (!thumb) return;
-    const img = { id:++uid, file, gps, thumb, fullUrl: url, marker:null };
+    const f = new File([blob], file.name, {type: blob.type});
+    const gps = await getGPS(f);
+    const thumb = await mkThumb(f);
+    if (!thumb) { setCloudStatus(`Could not generate thumbnail for ${file.name}`, '#f0883e'); return; }
+    const img = { id:++uid, file:f, gps, thumb, fullUrl: file.url, marker:null };
     images.push(img);
     if (gps) addMarker(img);
     addRow(img);
     updStats();
-  } catch(e) { console.warn('R2 load failed', key, e); }
-}
-
-// ── R2 UI ─────────────────────────────────────────────────────────────────────
-function openR2Modal() {
-  document.getElementById('r2-modal').style.display = 'flex';
-  populateR2Settings();
-  switchR2Tab('browse');
-  r2LoadDir('');
-}
-function closeR2Modal() { document.getElementById('r2-modal').style.display = 'none'; }
-
-document.getElementById('btnCloud').onclick = openR2Modal;
-document.getElementById('r2-close').onclick = closeR2Modal;
-document.getElementById('r2-modal').onclick = e => { if(e.target===document.getElementById('r2-modal')) closeR2Modal(); };
-
-function switchR2Tab(tab) {
-  ['browse','upload','settings'].forEach(t => {
-    document.getElementById('r2-'+t).style.display = t===tab ? 'flex' : 'none';
-    document.getElementById('r2tab-'+t).style.borderBottomColor = t===tab ? '#60a5fa' : 'transparent';
-    document.getElementById('r2tab-'+t).style.color = t===tab ? '#60a5fa' : '#7d8590';
-  });
-}
-document.getElementById('r2tab-browse').onclick   = () => switchR2Tab('browse');
-document.getElementById('r2tab-upload').onclick   = () => switchR2Tab('upload');
-document.getElementById('r2tab-settings').onclick = () => switchR2Tab('settings');
-
-async function r2LoadDir(prefix) {
-  r2CurrentPrefix = prefix;
-  r2Selected.clear();
-  document.getElementById('r2-path').textContent = '📁 /' + prefix;
-  document.getElementById('r2-load-selected').style.display = 'none';
-  document.getElementById('r2-selection-bar').style.display = 'none';
-
-  const list = document.getElementById('r2-file-list');
-  list.innerHTML = `<div style="padding:20px;text-align:center;color:#7d8590;font-size:11px">Loading…</div>`;
-
-  try {
-    const { folders, files } = await r2List(prefix);
-    list.innerHTML = '';
-
-    if (folders.length===0 && files.length===0) {
-      list.innerHTML = `<div style="padding:20px;text-align:center;color:#7d8590;font-size:11px">Empty folder</div>`;
-      return;
-    }
-
-    // Folders
-    folders.forEach(f => {
-      const name = f.slice(prefix.length).replace(/\/$/,'');
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:4px;cursor:pointer;border:1px solid transparent';
-      row.innerHTML = `<span style="font-size:14px">📁</span><span style="font-size:11px;color:#e6edf3;flex:1">${name}</span><span style="font-size:10px;color:#7d8590">folder</span>`;
-      row.onmouseover=()=>row.style.background='#1c2128';
-      row.onmouseout=()=>row.style.background='';
-      row.ondblclick=()=>r2LoadDir(f);
-      row.onclick=()=>r2LoadDir(f);
-      list.appendChild(row);
-    });
-
-    // Files
-    files.forEach(f => {
-      const name = f.key.slice(prefix.length);
-      const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : (f.size/1024).toFixed(0)+' KB';
-      const pubUrl = `${r2Config.publicUrl}/${f.key}`;
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:4px;cursor:pointer;border:1px solid transparent';
-      row.dataset.key = f.key;
-
-      const cb = document.createElement('input');
-      cb.type='checkbox'; cb.style.cssText='width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:#60a5fa';
-      cb.onclick = e => { e.stopPropagation(); toggleR2Select(f.key, cb.checked, row); };
-
-      const thumb = document.createElement('img');
-      thumb.style.cssText='width:36px;height:36px;object-fit:cover;border-radius:3px;background:#0d1117;flex-shrink:0';
-      thumb.src = pubUrl;
-      thumb.onerror=()=>thumb.style.opacity='.2';
-
-      const meta = document.createElement('div');
-      meta.style.cssText='flex:1;min-width:0';
-      meta.innerHTML=`<div style="font-size:11px;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div><div style="font-size:10px;color:#7d8590">${size}</div>`;
-
-      const loadBtn = document.createElement('button');
-      loadBtn.textContent='Load';
-      loadBtn.style.cssText='background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:2px 8px;flex-shrink:0';
-      loadBtn.onmouseover=()=>loadBtn.style.borderColor='#60a5fa';
-      loadBtn.onmouseout=()=>loadBtn.style.borderColor='#30363d';
-      loadBtn.onclick=async(e)=>{ e.stopPropagation(); loadBtn.textContent='…'; await loadFromR2Url(pubUrl, f.key); loadBtn.textContent='✓'; toast(`Loaded ${name}`); };
-
-      row.appendChild(cb); row.appendChild(thumb); row.appendChild(meta); row.appendChild(loadBtn);
-      row.onclick=()=>{ cb.checked=!cb.checked; toggleR2Select(f.key, cb.checked, row); };
-      list.appendChild(row);
-    });
-
+    setCloudStatus(`✓ Loaded ${file.name}`, '#3fb950');
   } catch(e) {
-    list.innerHTML = `<div style="padding:20px;text-align:center;color:#f85149;font-size:11px">Error: ${e.message}<br><br>Check your credentials in Settings.</div>`;
+    setCloudStatus(`Failed to load ${file.name}: ${e.message}`, '#f85149');
   }
 }
 
-function toggleR2Select(key, checked, row) {
-  if (checked) { r2Selected.add(key); row.style.background='#1c2128'; row.style.borderColor='#60a5fa'; }
-  else { r2Selected.delete(key); row.style.background=''; row.style.borderColor='transparent'; }
-  const bar = document.getElementById('r2-selection-bar');
-  const cnt = document.getElementById('r2-sel-count');
-  if (r2Selected.size > 0) {
-    bar.style.display='flex'; cnt.textContent=`${r2Selected.size} selected`;
-  } else {
-    bar.style.display='none';
-  }
-}
-
-document.getElementById('r2-up').onclick = () => {
-  if (!r2CurrentPrefix) return;
-  const parts = r2CurrentPrefix.split('/').filter(Boolean);
-  parts.pop();
-  r2LoadDir(parts.length ? parts.join('/')+'/' : '');
+// Wire up Cloud Folder modal
+document.getElementById('btnCloud').onclick = () => {
+  document.getElementById('cloud-modal').style.display='flex';
+  renderSavedFolders();
 };
-document.getElementById('r2-refresh').onclick = () => r2LoadDir(r2CurrentPrefix);
+document.getElementById('cloud-close').onclick = () => document.getElementById('cloud-modal').style.display='none';
+document.getElementById('cloud-modal').onclick = e => { if(e.target===document.getElementById('cloud-modal')) document.getElementById('cloud-modal').style.display='none'; };
+document.getElementById('cloud-go').onclick = browseCloudFolder;
+document.getElementById('cloud-url').onkeydown = e => { if(e.key==='Enter') browseCloudFolder(); };
 
-document.getElementById('r2-load-sel-bar').onclick = async () => {
-  const keys = [...r2Selected];
-  toast(`Loading ${keys.length} images from R2…`);
-  closeR2Modal();
-  for (const key of keys) {
-    await loadFromR2Url(`${r2Config.publicUrl}/${key}`, key);
-  }
+// Provider tabs
+document.getElementById('ctab-gdrive').onclick = () => {
+  cloudProvider='gdrive';
+  document.getElementById('ctab-gdrive').classList.add('on');
+  document.getElementById('ctab-gdrive').style.cssText='flex:1;padding:8px;border-radius:5px;border:1px solid #60a5fa;background:#1c2128;color:#60a5fa;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px';
+  document.getElementById('ctab-onedrive').style.cssText='flex:1;padding:8px;border-radius:5px;border:1px solid #30363d;background:transparent;color:#7d8590;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px';
+  document.getElementById('instr-gdrive').style.display='block';
+  document.getElementById('instr-onedrive').style.display='none';
+  document.getElementById('cloud-url').placeholder='Paste your Google Drive folder link…';
+};
+document.getElementById('ctab-onedrive').onclick = () => {
+  cloudProvider='onedrive';
+  document.getElementById('ctab-onedrive').style.cssText='flex:1;padding:8px;border-radius:5px;border:1px solid #60a5fa;background:#1c2128;color:#60a5fa;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px';
+  document.getElementById('ctab-gdrive').style.cssText='flex:1;padding:8px;border-radius:5px;border:1px solid #30363d;background:transparent;color:#7d8590;font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px';
+  document.getElementById('instr-onedrive').style.display='block';
+  document.getElementById('instr-gdrive').style.display='none';
+  document.getElementById('cloud-url').placeholder='Paste your OneDrive folder link…';
+};
+
+// Select all / GPS only
+document.getElementById('cloud-sel-all').onclick = () => {
+  const items = document.getElementById('cloud-items');
+  items.querySelectorAll('input[type=checkbox]').forEach((cb,idx) => {
+    cb.checked=true; cloudSelectedFiles.add(idx);
+    cb.closest('div').style.borderColor='#60a5fa'; cb.closest('div').style.background='#1c2128';
+  });
+  document.getElementById('cloud-load-sel').style.display='inline-flex';
+  document.getElementById('cloud-file-count').textContent=`${cloudSelectedFiles.size} selected`;
+};
+
+document.getElementById('cloud-load-sel').onclick = async () => {
+  const sel = [...cloudSelectedFiles].map(i => cloudFileIndex[i]);
+  document.getElementById('cloud-modal').style.display='none';
+  toast(`Loading ${sel.length} images from cloud…`);
+  for (const file of sel) await loadCloudImage(file);
   const geo = images.filter(i=>i.gps);
-  if (geo.length > 1) map.fitBounds(L.latLngBounds(geo.map(i=>[i.gps.lat,i.gps.lon])),{padding:[60,60]});
+  if (geo.length>1) map.fitBounds(L.latLngBounds(geo.map(i=>[i.gps.lat,i.gps.lon])),{padding:[60,60]});
   drawFP();
-  toast(`✓ Loaded ${keys.length} images from R2`);
-};
-
-// Upload tab
-const dropzone = document.getElementById('r2-dropzone');
-dropzone.onclick = () => { const i=document.createElement('input'); i.type='file'; i.multiple=true; i.onchange=e=>handleR2Upload(e.target.files); i.click(); };
-dropzone.ondragover = e => { e.preventDefault(); dropzone.style.borderColor='#60a5fa'; };
-dropzone.ondragleave = () => { dropzone.style.borderColor='#30363d'; };
-dropzone.ondrop = e => { e.preventDefault(); dropzone.style.borderColor='#30363d'; handleR2Upload(e.dataTransfer.files); };
-
-async function handleR2Upload(fileList) {
-  const files = Array.from(fileList).filter(f=>/\.(jpe?g|tiff?|heic)$/i.test(f.name));
-  if (!files.length) { toast('No supported image files selected', '#f85149'); return; }
-  const folder = document.getElementById('r2-folder-input').value.trim().replace(/\/+$/,'');
-  const uploadList = document.getElementById('r2-upload-list');
-
-  for (const file of files) {
-    const key = folder ? `${folder}/${file.name}` : file.name;
-    const row = document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 8px;background:#0d1117;border-radius:4px;font-size:11px';
-    row.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e6edf3">${file.name}</span><span id="up-${file.name.replace(/\W/g,'_')}" style="color:#7d8590;flex-shrink:0">Waiting…</span>`;
-    uploadList.appendChild(row);
-  }
-
-  for (const file of files) {
-    const statusId = `up-${file.name.replace(/\W/g,'_')}`;
-    const statusEl = document.getElementById(statusId);
-    if (statusEl) { statusEl.textContent='Uploading…'; statusEl.style.color='#f0883e'; }
-    try {
-      const key = folder ? `${folder}/${file.name}` : file.name;
-      await r2Upload(file, key);
-      if (statusEl) { statusEl.textContent='✓ Done'; statusEl.style.color='#3fb950'; }
-    } catch(e) {
-      if (statusEl) { statusEl.textContent='✗ Failed'; statusEl.style.color='#f85149'; }
-      console.warn('Upload failed', file.name, e);
-    }
-  }
-  toast(`✓ Upload complete — ${files.length} files`);
-}
-
-// Settings tab
-function populateR2Settings() {
-  document.getElementById('r2-account-id').value = r2Config.accountId || '';
-  document.getElementById('r2-access-key').value = r2Config.accessKey || '';
-  document.getElementById('r2-secret-key').value = r2Config.secretKey || '';
-  document.getElementById('r2-bucket-name').value = r2Config.bucket || '';
-  document.getElementById('r2-public-url').value = r2Config.publicUrl || '';
-}
-
-document.getElementById('r2-save-settings').onclick = () => {
-  r2Config = {
-    accountId: document.getElementById('r2-account-id').value.trim(),
-    accessKey: document.getElementById('r2-access-key').value.trim(),
-    secretKey: document.getElementById('r2-secret-key').value.trim(),
-    bucket:    document.getElementById('r2-bucket-name').value.trim(),
-    publicUrl: document.getElementById('r2-public-url').value.trim().replace(/\/$/,'')
-  };
-  saveR2Config(r2Config);
-  document.getElementById('r2-bucket-label').textContent = r2Config.bucket;
-  document.getElementById('r2-settings-status').textContent = '✓ Saved';
-  setTimeout(()=>document.getElementById('r2-settings-status').textContent='', 2000);
-  toast('R2 settings saved');
+  toast(`✓ Loaded ${sel.length} images`);
 };
 
 // ── Init ──────────────────────────────────────────────────────────────────────
