@@ -10,7 +10,6 @@
 <script src="https://unpkg.com/georaster-layer-for-leaflet@2.4.0/dist/georaster-layer-for-leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-s3@3.400.0/dist-cjs/index.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -1449,42 +1448,47 @@ function r2Endpoint() {
 }
 
 // Sign a request using AWS Signature Version 4
-async function r2SignedFetch(method, path, body=null, extraHeaders={}) {
-  const url = `${r2Endpoint()}/${r2Config.bucket}${path}`;
+async function r2SignedFetch(method, pathAndQuery, body=null, extraHeaders={}) {
+  const baseUrl = `${r2Endpoint()}/${r2Config.bucket}`;
+  const [path, qs=''] = pathAndQuery.split('?');
+  const url = baseUrl + path + (qs ? '?'+qs : '');
+
   const now = new Date();
   const datestamp = now.toISOString().slice(0,10).replace(/-/g,'');
   const timestamp = now.toISOString().replace(/[:-]/g,'').slice(0,15)+'Z';
-  const region = 'auto';
-  const service = 's3';
+  const region = 'auto', service = 's3';
 
-  const payloadHash = body
-    ? await sha256hex(body)
+  const payloadHash = body instanceof ArrayBuffer
+    ? await sha256hex(new Uint8Array(body))
     : 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
+  const host = `${r2Config.accountId}.r2.cloudflarestorage.com`;
   const headers = {
-    'host': `${r2Config.accountId}.r2.cloudflarestorage.com`,
+    'host': host,
     'x-amz-date': timestamp,
     'x-amz-content-sha256': payloadHash,
     ...extraHeaders
   };
 
-  const signedHeaders = Object.keys(headers).sort().join(';');
-  const canonicalHeaders = Object.entries(headers).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}:${v}\n`).join('');
+  const sortedHeaders = Object.keys(headers).sort();
+  const signedHeaders = sortedHeaders.join(';');
+  const canonicalHeaders = sortedHeaders.map(k=>`${k}:${headers[k]}\n`).join('');
 
-  const parsedUrl = new URL(url);
-  const canonicalRequest = [method, parsedUrl.pathname, parsedUrl.search.slice(1), canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  // Sort query string params for canonical request
+  const sortedQs = qs ? [...new URLSearchParams(qs).entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&') : '';
+
+  const canonicalRequest = [method, path||'/', sortedQs, canonicalHeaders, signedHeaders, payloadHash].join('\n');
   const credentialScope = `${datestamp}/${region}/${service}/aws4_request`;
   const stringToSign = `AWS4-HMAC-SHA256\n${timestamp}\n${credentialScope}\n${await sha256hex(canonicalRequest)}`;
-
   const signingKey = await getSigningKey(r2Config.secretKey, datestamp, region, service);
   const signature = await hmacHex(signingKey, stringToSign);
 
   const authHeader = `AWS4-HMAC-SHA256 Credential=${r2Config.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  const fetchHeaders = {};
+  sortedHeaders.forEach(k => { if(k!=='host') fetchHeaders[k]=headers[k]; });
+  fetchHeaders['Authorization'] = authHeader;
 
-  const fetchHeaders = { ...headers, 'Authorization': authHeader };
-  delete fetchHeaders['host'];
-
-  return fetch(url, { method, headers: fetchHeaders, body });
+  return fetch(url, { method, headers: fetchHeaders, body: body instanceof ArrayBuffer ? body : null });
 }
 
 async function sha256hex(msg) {
@@ -1514,20 +1518,24 @@ async function getSigningKey(secret, date, region, service) {
 
 // List objects in bucket with optional prefix
 async function r2List(prefix='') {
-  const qs = new URLSearchParams({ 'list-type':'2', delimiter:'/', ...(prefix?{prefix}:{}) });
-  const res = await r2SignedFetch('GET', `?${qs.toString()}`);
-  if (!res.ok) throw new Error(`R2 list failed: ${res.status}`);
+  const params = new URLSearchParams();
+  params.set('list-type', '2');
+  params.set('delimiter', '/');
+  if (prefix) params.set('prefix', prefix);
+  const res = await r2SignedFetch('GET', `?${params.toString()}`);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`R2 list failed: ${res.status} — ${txt.slice(0,200)}`);
+  }
   const xml = await res.text();
   const parser = new DOMParser();
   const doc = parser.parseFromString(xml, 'text/xml');
-
   const folders = [...doc.querySelectorAll('CommonPrefixes Prefix')].map(el => el.textContent);
   const files   = [...doc.querySelectorAll('Contents')].map(el => ({
     key:  el.querySelector('Key').textContent,
     size: +el.querySelector('Size').textContent,
     lastModified: el.querySelector('LastModified').textContent
   })).filter(f => /\.(jpe?g|tiff?|heic)$/i.test(f.key));
-
   return { folders, files };
 }
 
