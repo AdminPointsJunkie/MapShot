@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MapShot</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet@2.4.0/dist/georaster-layer-for-leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#hdr{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0;flex-wrap:wrap}
+#hdr h1{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+#hdr .tag{font-size:10px;color:#7d8590}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:5px;font-family:inherit;font-size:11px;cursor:pointer;border:1px solid;white-space:nowrap;transition:background .15s}
+.bg{background:#238636;color:#fff;border-color:#2ea043}.bg:hover{background:#2ea043}
+.br{background:transparent;color:#f85149;border-color:#f8514950}.br:hover{background:#f8514915;border-color:#f85149}
+.bo{background:transparent;color:#f0883e;border-color:#f0883e50}.bo:hover{background:#f0883e15;border-color:#f0883e}
+.bp{background:transparent;color:#a371f7;border-color:#a371f750}.bp:hover{background:#a371f715;border-color:#a371f7}
+.bs{background:transparent;color:#3fb950;border-color:#3fb95050}.bs:hover{background:#3fb95015;border-color:#3fb950}
+#layersw{display:flex;border:1px solid #30363d;border-radius:5px;overflow:hidden;margin-left:auto}
+.lbtn{padding:4px 10px;background:transparent;color:#7d8590;border:none;border-right:1px solid #30363d;font-family:inherit;font-size:11px;cursor:pointer;transition:all .1s}
+.lbtn:last-child{border-right:none}
+.lbtn:hover{background:#1c2128;color:#e6edf3}
+.lbtn.on{background:#1c2128;color:#58a6ff}
+#hstats{font-size:11px;color:#7d8590;display:none;gap:10px}
+#hstats strong{color:#58a6ff}
+#main{display:flex;flex:1;overflow:hidden;position:relative}
+#map{flex:1}
+#sb{width:280px;background:#161b22;border-left:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease,opacity .2s ease;position:relative}
+#sb.collapsed{width:0;opacity:0;pointer-events:none;border-left:none}
+#sb-resize{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:ew-resize;z-index:20;background:transparent}
+#sb-resize:hover{background:#58a6ff30}
+#sb-toggle{position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:21;width:18px;height:48px;background:#161b22;border:1px solid #30363d;border-right:none;border-radius:6px 0 0 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#7d8590;font-size:11px;transition:color .15s,background .15s}
+#sb-toggle:hover{background:#1c2128;color:#e6edf3}
+#sbhd{padding:8px 12px;border-bottom:1px solid #30363d;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7d8590;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+#sblist{overflow-y:auto;flex:1;padding:5px;display:flex;flex-direction:column;gap:3px}
+#sblist::-webkit-scrollbar{width:3px}
+#sblist::-webkit-scrollbar-thumb{background:#30363d}
+.row{display:flex;align-items:center;gap:7px;padding:6px;border-radius:4px;cursor:pointer;border:1px solid transparent}
+.row:hover{background:#1c2128;border-color:#30363d}
+.row.on{background:#1c2128;border-color:#58a6ff}
+.row.ng{opacity:.4;cursor:default;pointer-events:none}
+.row img{width:42px;height:42px;object-fit:cover;border-radius:3px;flex-shrink:0;background:#0d1117}
+.rmeta{flex:1;min-width:0}
+.rname{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{font-size:10px;color:#7d8590;margin-top:1px}
+.rsub.warn{color:#f0883e}
+.rdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.rdot.g{background:#3fb950}.rdot.x{background:#444}
+
+/* ── sidebar groups ── */
+.grp{margin-bottom:2px}
+.grp-hd{display:flex;align-items:center;gap:6px;padding:5px 6px 5px 4px;border-radius:4px;cursor:pointer;position:sticky;top:0;z-index:10;background:#161b22;border:1px solid #30363d;user-select:none}
+.grp-hd:hover{background:#1c2128}
+.grp-arrow{font-size:10px;color:#7d8590;width:12px;flex-shrink:0;transition:transform .15s}
+.grp-arrow.open{transform:rotate(90deg)}
+.grp-label{flex:1;min-width:0;font-size:11px;font-weight:600;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp-label-input{flex:1;background:transparent;border:none;border-bottom:1px solid #58a6ff;color:#58a6ff;font-family:inherit;font-size:11px;font-weight:600;outline:none;min-width:0}
+.grp-count{font-size:10px;color:#7d8590;flex-shrink:0}
+.grp-edit{font-size:10px;color:#7d8590;cursor:pointer;padding:1px 4px;border-radius:3px;flex-shrink:0;opacity:0}
+.grp-hd:hover .grp-edit{opacity:1}
+.grp-edit:hover{color:#58a6ff}
+/* visibility checkbox */
+.grp-vis{width:14px;height:14px;border-radius:3px;border:1px solid #444;background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:#3fb950;transition:all .1s}
+.grp-vis.off{border-color:#333;color:transparent;background:#1c2128}
+.grp-vis:hover{border-color:#58a6ff}
+.grp-body{display:flex;flex-direction:column;gap:2px;padding-left:8px;margin-top:2px}
+
+/* ── filter panel ── */
+#filter-panel{background:#0d1117;border-bottom:1px solid #30363d;flex-shrink:0;overflow:hidden;max-height:0;transition:max-height .25s ease}
+#filter-panel.open{max-height:500px}
+#filter-inner{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.fp-row{display:flex;flex-direction:column;gap:3px}
+.fp-label{font-size:10px;color:#7d8590;letter-spacing:.06em;text-transform:uppercase}
+.fp-input{background:#161b22;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:4px 7px;width:100%;outline:none}
+.fp-input:focus{border-color:#58a6ff}
+.fp-row-2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fp-chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid #30363d;color:#7d8590;background:transparent;transition:all .1s}
+.chip:hover{border-color:#58a6ff;color:#58a6ff}
+.chip.on{background:#58a6ff20;border-color:#58a6ff;color:#58a6ff}
+.fp-actions{display:flex;gap:6px;margin-top:2px}
+.fp-btn{flex:1;padding:4px;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;border:1px solid;transition:background .1s;text-align:center}
+.fp-apply{background:#238636;color:#fff;border-color:#2ea043}.fp-apply:hover{background:#2ea043}
+.fp-clear{background:transparent;color:#7d8590;border-color:#30363d}.fp-clear:hover{color:#e6edf3;border-color:#7d8590}
+#filter-badge{display:none;background:#f0883e;color:#0d1117;border-radius:8px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:2px}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#7d8590;padding:30px 16px;text-align:center}
+.empty svg{opacity:.2}
+.empty p{font-size:11px;line-height:1.7}
+.proc{padding:12px}
+.proc p{font-size:11px;color:#7d8590;margin-bottom:6px}
+.pbar{background:#0d1117;border-radius:3px;height:3px}
+.pfill{height:100%;background:#238636;border-radius:3px;width:0%;transition:width .1s}
+#stbar{display:flex;align-items:center;background:#161b22;border-top:1px solid #30363d;flex-shrink:0;height:26px;font-size:11px;color:#7d8590;overflow:hidden}
+.si{padding:0 12px;border-right:1px solid #30363d;height:100%;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.si strong{color:#e6edf3;font-weight:400;font-variant-numeric:tabular-nums;min-width:9ch;display:inline-block}
+.si.blue strong{color:#58a6ff}
+#stbar .spacer{flex:1}
+#stbar .zoom{padding:0 12px;font-size:11px;color:#7d8590}
+.leaflet-popup-content-wrapper{background:#161b22!important;color:#e6edf3!important;border:1px solid #30363d!important;border-radius:6px!important;box-shadow:0 8px 24px rgba(0,0,0,.5)!important;padding:0!important}
+.leaflet-popup-tip{background:#161b22!important}
+.leaflet-popup-content{margin:0!important}
+.pu{padding:8px;min-width:190px}
+.pu-img{width:100%;border-radius:3px;display:block;margin-bottom:6px;cursor:zoom-in;max-height:155px;object-fit:cover;transition:max-height .25s ease}
+.pu-img.big{max-height:400px;object-fit:contain;cursor:zoom-out;background:#0d1117}
+.pu-name{font-size:11px;font-weight:600;margin-bottom:3px}
+.pu-ll{font-size:10px;color:#7d8590}
+.pu-amg{font-size:10px;color:#58a6ff}
+.pu-alt{font-size:10px;color:#3fb950}
+#lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;align-items:center;justify-content:center}
+#lb.open{display:flex}
+#lb img{max-width:82vw;max-height:80vh;border-radius:5px;display:block}
+.lbnav{position:absolute;top:50%;transform:translateY(-50%);background:#161b22;border:1px solid #30363d;color:#e6edf3;border-radius:6px;width:40px;height:40px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lbnav:hover{background:#30363d}
+.lbnav:disabled{opacity:.2;cursor:default}
+#lbprev{left:14px}#lbnext{right:14px}
+#lbclose{position:absolute;top:12px;right:12px;background:#161b22;border:1px solid #30363d;color:#e6edf3;border-radius:50%;width:32px;height:32px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#lbclose:hover{background:#30363d}
+#lbcount{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:11px;color:#7d8590;background:#161b22;border:1px solid #30363d;border-radius:20px;padding:3px 12px}
+#lbmeta{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:#161b22cc;border:1px solid #30363d;border-radius:6px;padding:7px 14px;font-size:11px;color:#7d8590;display:flex;gap:14px;flex-wrap:wrap;max-width:92vw;white-space:nowrap}
+#lbmeta strong{color:#e6edf3}
+.ft-tip{background:#161b22!important;border:1px solid #30363d!important;color:#e6edf3!important;font-size:10px!important}
+.ft-tip::before{display:none!important}
+#toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#161b22;border:1px solid #3fb950;color:#3fb950;padding:7px 18px;border-radius:20px;font-size:11px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div><h1>MapShot</h1><div class="tag">GPS · EXIF · Imagery · Field Survey</div></div>
+  <button class="btn bg" id="btnOpen">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>Open Images
+  </button>
+  <button class="btn bg" id="btnFolder">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M3 11h18"/></svg>Scan Folder
+  </button>
+  <button class="btn bp" id="btnGtiff">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>GeoTIFF
+  </button>
+  <button class="btn bp" id="btnRmGtiff" style="display:none">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Remove GeoTIFF
+  </button>
+  <button class="btn bo" id="btnFP" style="display:none">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 4 4-6 4 3"/></svg>Flight Path
+  </button>
+  <button class="btn bs" id="btnSave" style="display:none">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Project
+  </button>
+  <button class="btn bs" id="btnLoad">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Load Project
+  </button>
+  <button class="btn br" id="btnClear" style="display:none">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>Clear
+  </button>
+  <div id="hstats">
+    <span><strong id="stTot">0</strong> images</span>
+    <span><strong id="stGps">0</strong> georef</span>
+    <span><strong id="stNone">0</strong> no GPS</span>
+  </div>
+  <div id="layersw">
+    <button class="lbtn on" id="lDark">Dark</button>
+    <button class="lbtn" id="lSat">Sat</button>
+    <button class="lbtn" id="lHybrid">Hybrid</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="map"></div>
+  <!-- sidebar toggle tab -->
+  <div id="sb-toggle" title="Toggle sidebar">❯</div>
+  <div id="sb">
+    <div id="sb-resize"></div>
+    <div id="sbhd">
+      <span>Images</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="sbcnt" style="color:#58a6ff">—</span>
+        <button id="btnFilter" title="Filter images" style="background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:2px 7px;display:flex;align-items:center;gap:3px;transition:all .1s">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Filter<span id="filter-badge">0</span>
+        </button>
+      </div>
+    </div>
+    <div id="filter-panel">
+      <div id="filter-inner">
+        <div class="fp-row">
+          <div class="fp-label">Filename contains</div>
+          <input class="fp-input" id="fp-name" type="text" placeholder="e.g. DJI_0">
+        </div>
+        <div class="fp-row">
+          <div class="fp-label">Camera make / model</div>
+          <input class="fp-input" id="fp-camera" type="text" placeholder="e.g. DJI, Apple, Sony">
+        </div>
+        <div class="fp-row">
+          <div class="fp-label">Date range</div>
+          <div class="fp-row-2">
+            <input class="fp-input" id="fp-date-from" type="date" title="From date">
+            <input class="fp-input" id="fp-date-to"   type="date" title="To date">
+          </div>
+        </div>
+        <div class="fp-row">
+          <div class="fp-label">Altitude (m)</div>
+          <div class="fp-row-2">
+            <input class="fp-input" id="fp-alt-min" type="number" placeholder="Min" step="1">
+            <input class="fp-input" id="fp-alt-max" type="number" placeholder="Max" step="1">
+          </div>
+        </div>
+        <div class="fp-row">
+          <div class="fp-label">Has GPS</div>
+          <div class="fp-chips">
+            <div class="chip on" data-gps="any">Any</div>
+            <div class="chip" data-gps="yes">GPS only</div>
+            <div class="chip" data-gps="no">No GPS only</div>
+          </div>
+        </div>
+        <div class="fp-row" id="fp-group-row" style="display:none">
+          <div class="fp-label">Group</div>
+          <div class="fp-chips" id="fp-groups"></div>
+        </div>
+        <div class="fp-actions">
+          <button class="fp-btn fp-apply" id="fp-apply">Apply</button>
+          <button class="fp-btn fp-clear" id="fp-clear">Clear</button>
+        </div>
+      </div>
+    </div>
+    <div id="sblist">
+      <div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 2L8 7H3l2 5-2 5h5l4 5 4-5h5l-2-5 2-5h-5L12 2z"/><circle cx="12" cy="12" r="2.5"/></svg>
+        <p>Click <b>Open Images</b><br>and select your drone photos<br><span style="opacity:.5;font-size:10px">JPG · TIFF · HEIC</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="stbar">
+  <div class="si"><span>Lat</span><strong id="stLat">—</strong></div>
+  <div class="si"><span>Lon</span><strong id="stLon">—</strong></div>
+  <div class="si blue" id="stProj" style="cursor:pointer;user-select:none" title="Click to change projection">
+    <span id="stProjLabel">AMG55</span><strong id="stE">—</strong><strong id="stN">—</strong>
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="si"><span>Alt</span><strong id="stAlt">—</strong></div>
+  <div class="spacer"></div>
+  <div class="zoom">Z <strong id="stZ">—</strong></div>
+</div>
+
+<!-- EPSG selector modal -->
+<div id="epsg-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9500;align-items:flex-end;justify-content:center">
+  <div style="background:#161b22;border:1px solid #30363d;border-radius:8px 8px 0 0;width:100%;max-width:520px;padding:16px;display:flex;flex-direction:column;gap:10px;max-height:80vh">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:600;letter-spacing:.05em">Select Projection</span>
+      <button id="epsg-close" style="background:transparent;border:none;color:#7d8590;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <!-- Search / custom code -->
+    <div style="display:flex;gap:6px">
+      <input id="epsg-search" type="text" placeholder="Search name or type EPSG code e.g. 28355…" style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:5px 8px;outline:none">
+      <button id="epsg-lookup" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;padding:5px 10px">Look up</button>
+    </div>
+    <!-- Group tabs -->
+    <div id="epsg-tabs" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    <!-- Projection list -->
+    <div id="epsg-list" style="overflow-y:auto;display:flex;flex-direction:column;gap:2px;flex:1"></div>
+  </div>
+</div>
+
+<div id="lb">
+  <button id="lbclose">✕</button>
+  <div id="lbcount"></div>
+  <button class="lbnav" id="lbprev">←</button>
+  <img id="lbimg" src="" alt="">
+  <button class="lbnav" id="lbnext">→</button>
+  <div id="lbmeta"></div>
+</div>
+
+<div id="toast"></div>
+
+<!-- hidden inputs -->
+<input type="file" id="fileIn"    multiple style="position:fixed;left:-9999px">
+<input type="file" id="folderIn" multiple webkitdirectory style="position:fixed;left:-9999px">
+<input type="file" id="gtiffIn"  accept=".tif,.tiff" style="position:fixed;left:-9999px">
+<input type="file" id="projIn"   accept=".json" style="position:fixed;left:-9999px">
+
+<script>
+'use strict';
+
+// ── EXIF via exifr ────────────────────────────────────────────────────────────
+async function getGPS(file) {
+  try {
+    const r = await exifr.parse(file, { tiff:true, exif:true, gps:true, ifd1:false, sanitize:true, mergeOutput:true });
+    if (!r || r.latitude == null || r.longitude == null) return null;
+    let ts = null;
+    if (r.GPSDateStamp && r.GPSTimeStamp) {
+      const [yr,mo,dy] = r.GPSDateStamp.split(':').map(Number);
+      const [hh,mm,ss] = r.GPSTimeStamp;
+      ts = Date.UTC(yr, mo-1, dy, hh, mm, Math.floor(ss));
+    } else if (r.DateTimeOriginal) {
+      ts = r.DateTimeOriginal.getTime();
+    }
+    return { lat:r.latitude, lon:r.longitude, alt:r.GPSAltitude??null, dir:r.GPSImgDirection??null, ts, make:r.Make||'', model:r.Model||'', dt:r.DateTimeOriginal?r.DateTimeOriginal.toISOString():'' };
+  } catch(e) { console.warn('exifr failed', file.name, e); return null; }
+}
+
+// ── Projection engine ─────────────────────────────────────────────────────────
+// Transverse Mercator core — works for GDA2020/MGA, GDA94/MGA, AGD84/AMG
+function tmProject(latD, lonD, a, f, k0, cm, E0, N0) {
+  const b=a*(1-f), e2=1-(b*b)/(a*a), ep2=e2/(1-e2);
+  const R=Math.PI/180, phi=latD*R, lam=(lonD-cm)*R;
+  const sP=Math.sin(phi), cP=Math.cos(phi), tP=Math.tan(phi);
+  const nu=a/Math.sqrt(1-e2*sP*sP);
+  const T=tP*tP, C=ep2*cP*cP, A=cP*lam;
+  const A2=A*A,A3=A2*A,A4=A3*A,A5=A4*A,A6=A5*A,T2=T*T,C2=C*C;
+  const e4=e2*e2, e6=e4*e2;
+  const M=a*((1-e2/4-3*e4/64-5*e6/256)*phi
+    -(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*phi)
+    +(15*e4/256+45*e6/1024)*Math.sin(4*phi)
+    -(35*e6/3072)*Math.sin(6*phi));
+  const E=E0+k0*nu*(A+(1-T+C)*A3/6+(5-18*T+T2+72*C-58*ep2)*A5/120);
+  const N=N0+k0*(M+nu*tP*(A2/2+(5-T+9*C+4*C2)*A4/24+(61-58*T+T2+600*C-330*ep2)*A6/720));
+  return { E:Math.round(E), N:Math.round(N) };
+}
+
+// Ellipsoid definitions
+const ELLIPSOIDS = {
+  GRS80:  { a:6378137.0,   f:1/298.257222101 },  // GDA2020, GDA94
+  WGS84:  { a:6378137.0,   f:1/298.257223563 },  // WGS84
+  ANS:    { a:6378160.0,   f:1/298.25 },          // AGD84, AGD66 (Australian National Spheroid)
+};
+
+// Build zone definitions for MGA/AMG zones 49–56
+function mgaDef(zone, ellipsoid) {
+  const cm = (zone - 1) * 6 - 180 + 3;
+  return { ...ELLIPSOIDS[ellipsoid], k0:0.9996, cm, E0:500000, N0:10000000 };
+}
+
+// Pre-built EPSG registry — all useful Australian projections
+const EPSG_REGISTRY = {};
+
+// GDA2020 / MGA zones 49–56 (EPSG:7849–7856)
+for (let z=49; z<=56; z++) {
+  const code = 7800+z;
+  EPSG_REGISTRY[code] = {
+    label:`GDA2020 / MGA Zone ${z}`,
+    group:'GDA2020 / MGA',
+    type:'tm', zone:z, def:mgaDef(z,'GRS80')
+  };
+}
+
+// GDA94 / MGA zones 49–56 (EPSG:28349–28356)
+for (let z=49; z<=56; z++) {
+  const code = 28300+z;
+  EPSG_REGISTRY[code] = {
+    label:`GDA94 / MGA Zone ${z}`,
+    group:'GDA94 / MGA',
+    type:'tm', zone:z, def:mgaDef(z,'GRS80')
+  };
+}
+
+// AGD84 / AMG zones 49–56 (EPSG:20349–20356)
+for (let z=49; z<=56; z++) {
+  const code = 20300+z;
+  EPSG_REGISTRY[code] = {
+    label:`AGD84 / AMG Zone ${z}`,
+    group:'AGD84 / AMG',
+    type:'tm', zone:z, def:mgaDef(z,'ANS')
+  };
+}
+
+// AGD66 / AMG zones 49–56 (EPSG:20249–20256)
+for (let z=49; z<=56; z++) {
+  const code = 20200+z;
+  EPSG_REGISTRY[code] = {
+    label:`AGD66 / AMG Zone ${z}`,
+    group:'AGD66 / AMG',
+    type:'tm', zone:z, def:mgaDef(z,'ANS')
+  };
+}
+
+// Special projections
+EPSG_REGISTRY[4326]  = { label:'WGS84 Geographic',      group:'Geographic', type:'geo' };
+EPSG_REGISTRY[4283]  = { label:'GDA94 Geographic',       group:'Geographic', type:'geo' };
+EPSG_REGISTRY[7844]  = { label:'GDA2020 Geographic',     group:'Geographic', type:'geo' };
+EPSG_REGISTRY[3857]  = { label:'WGS84 Web Mercator',     group:'Web', type:'webmerc' };
+EPSG_REGISTRY[32754] = { label:'WGS84 / UTM Zone 54S',   group:'UTM', type:'tm', zone:54, def:{...ELLIPSOIDS.WGS84, k0:0.9996, cm:141, E0:500000, N0:10000000} };
+EPSG_REGISTRY[32755] = { label:'WGS84 / UTM Zone 55S',   group:'UTM', type:'tm', zone:55, def:{...ELLIPSOIDS.WGS84, k0:0.9996, cm:147, E0:500000, N0:10000000} };
+EPSG_REGISTRY[32756] = { label:'WGS84 / UTM Zone 56S',   group:'UTM', type:'tm', zone:56, def:{...ELLIPSOIDS.WGS84, k0:0.9996, cm:153, E0:500000, N0:10000000} };
+
+// Auto-detect best MGA/AMG zone from longitude
+function autoZone(lonD) { return Math.floor((lonD + 180) / 6) + 1; }
+
+function projectCoord(latD, lonD, epsgCode) {
+  const p = EPSG_REGISTRY[epsgCode];
+  if (!p) return null;
+  if (p.type === 'geo') return { E:lonD.toFixed(6), N:latD.toFixed(6), label:'Lon / Lat', isGeo:true };
+  if (p.type === 'webmerc') {
+    const R=6378137, x=R*lonD*Math.PI/180, y=R*Math.log(Math.tan(Math.PI/4+latD*Math.PI/360));
+    return { E:Math.round(x), N:Math.round(y), label:'X / Y' };
+  }
+  if (p.type === 'tm') {
+    const d = p.def;
+    return tmProject(latD, lonD, d.a, d.f, d.k0, d.cm, d.E0, d.N0);
+  }
+  return null;
+}
+
+// Active EPSG selection
+let activeEPSG = 20355; // default AMG Zone 55
+let customEPSGCache = {}; // cache for epsg.io lookups
+
+async function lookupEPSG(code) {
+  if (EPSG_REGISTRY[code]) return EPSG_REGISTRY[code];
+  if (customEPSGCache[code]) return customEPSGCache[code];
+  try {
+    const r = await fetch(`https://epsg.io/${code}.json`);
+    const d = await r.json();
+    if (!d || !d.results || !d.results[0]) return null;
+    const res = d.results[0];
+    // Only handle TM projections from the API for now
+    customEPSGCache[code] = { label: res.name, group:'Custom', type:'api', apiData: res };
+    return customEPSGCache[code];
+  } catch(e) { return null; }
+}
+
+function getProjectedCoords(latD, lonD) {
+  return projectCoord(latD, lonD, activeEPSG);
+}
+
+function formatCoords(coords, epsgCode) {
+  if (!coords) return '—';
+  const p = EPSG_REGISTRY[epsgCode] || customEPSGCache[epsgCode];
+  if (!p) return '—';
+  if (p.type === 'geo') return `${coords.E}, ${coords.N}`;
+  return `E ${Number(coords.E).toLocaleString()}  N ${Number(coords.N).toLocaleString()}`;
+}
+
+
+// ── IndexedDB for file handles ────────────────────────────────────────────────
+const IDB_NAME='DroneMapViewer', IDB_VER=1, IDB_STORE='handles';
+let _db = null;
+async function getDB() {
+  if (_db) return _db;
+  return new Promise((res,rej) => {
+    const r = indexedDB.open(IDB_NAME, IDB_VER);
+    r.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    r.onsuccess = e => { _db = e.target.result; res(_db); };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(key, val) {
+  const d = await getDB();
+  return new Promise((res,rej) => { const tx=d.transaction(IDB_STORE,'readwrite'); tx.objectStore(IDB_STORE).put(val,key); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); });
+}
+async function idbGet(key) {
+  const d = await getDB();
+  return new Promise((res,rej) => { const r=d.transaction(IDB_STORE).objectStore(IDB_STORE).get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, col='#3fb950') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.borderColor = col; t.style.color = col;
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.style.opacity = '0', 4000);
+}
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+let map, mLayer, fpLayer, tLayer, lblLayer, gtLayer=null;
+let images=[], activeMarker=null, fpVis=true, lbIdx=-1, uid=0;
+
+const TILES = {
+  dark:      { url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', opt:{subdomains:'abcd',maxZoom:22,maxNativeZoom:19,attribution:'© CARTO'} },
+  satellite: { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opt:{maxZoom:22,maxNativeZoom:21,attribution:'© Esri'} },
+  hybrid:    { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opt:{maxZoom:22,maxNativeZoom:21,attribution:'© Esri'}, lbl:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}' }
+};
+
+function setLayer(name) {
+  if(tLayer) map.removeLayer(tLayer);
+  if(lblLayer){ map.removeLayer(lblLayer); lblLayer=null; }
+  const t = TILES[name];
+  tLayer = L.tileLayer(t.url, t.opt).addTo(map); tLayer.setZIndex(1);
+  if(t.lbl){ lblLayer = L.tileLayer(t.lbl,{maxZoom:22,maxNativeZoom:19,opacity:0.85}).addTo(map); lblLayer.setZIndex(2); }
+  document.querySelectorAll('.lbtn').forEach((b,i) => b.classList.toggle('on', ['dark','satellite','hybrid'][i]===name));
+}
+
+function initMap() {
+  map = L.map('map',{zoomControl:false}).setView([0,0],2);
+  L.control.zoom({position:'topleft'}).addTo(map);
+  mLayer = L.layerGroup().addTo(map);
+  fpLayer = L.layerGroup().addTo(map);
+  setLayer('dark');
+  map.on('mousemove', e => {
+    const {lat,lng} = e.latlng;
+    document.getElementById('stLat').textContent = lat.toFixed(6);
+    document.getElementById('stLon').textContent = lng.toFixed(6);
+    const c = getProjectedCoords(lat, lng);
+    if (c) {
+      document.getElementById('stE').textContent = Number(c.E).toLocaleString();
+      document.getElementById('stN').textContent = Number(c.N).toLocaleString();
+    }
+  });
+  map.on('mouseout', () => ['stLat','stLon','stE','stN'].forEach(id => document.getElementById(id).textContent='—'));
+  const updZ = () => document.getElementById('stZ').textContent = map.getZoom();
+  map.on('zoomend', updZ); updZ();
+}
+
+// ── Markers ───────────────────────────────────────────────────────────────────
+function mkIcon(img, active) {
+  const s = active ? 56 : 44;
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:${s}px;height:${s}px;border-radius:4px;border:2px solid ${active?'#58a6ff':'rgba(255,255,255,0.25)'};overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.6);background:#111"><img src="${img.thumb}" style="width:100%;height:100%;object-fit:cover;display:block"></div><div style="position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${active?'#58a6ff':'rgba(255,255,255,0.25)'}"></div>`,
+    iconSize:[s,s+5], iconAnchor:[s/2,s+5], popupAnchor:[0,-(s+7)]
+  });
+}
+
+function addMarker(img) {
+  const mk = L.marker([img.gps.lat,img.gps.lon], {icon:mkIcon(img,false)});
+  mk.on('click', () => selImg(img,mk));
+  mk.bindPopup(L.popup({maxWidth:260}).setContent(() => makePU(img,mk)));
+  mk.addTo(mLayer);
+  img.marker = mk;
+}
+
+function makePU(img, mk) {
+  const d = document.createElement('div'); d.className='pu';
+  const th = document.createElement('img'); th.className='pu-img'; th.src=img.thumb;
+  th.onclick = () => {
+    if (!th.classList.contains('big')) { th.classList.add('big'); mk.update(); }
+    else openLB(img);
+  };
+  d.appendChild(th);
+  const proj = getProjectedCoords(img.gps.lat, img.gps.lon);
+  const projDef = EPSG_REGISTRY[activeEPSG] || customEPSGCache[activeEPSG];
+  const projLabel = projDef ? projDef.label : `EPSG:${activeEPSG}`;
+  const info = document.createElement('div');
+  info.innerHTML = `<div class="pu-name">${img.file.name}</div>
+    <div class="pu-ll">Lat ${img.gps.lat.toFixed(6)} &nbsp; Lon ${img.gps.lon.toFixed(6)}</div>
+    <div class="pu-amg">${projLabel} &nbsp; E ${proj?Number(proj.E).toLocaleString():'—'} &nbsp; N ${proj?Number(proj.N).toLocaleString():'—'}</div>
+    ${img.gps.alt!=null?`<div class="pu-alt">Alt ${img.gps.alt.toFixed(1)} m</div>`:''}`;
+  d.appendChild(info);
+  return d;
+}
+
+function selImg(img, mk) {
+  if (activeMarker && activeMarker._img) activeMarker.setIcon(mkIcon(activeMarker._img,false));
+  mk._img = img; mk.setIcon(mkIcon(img,true)); activeMarker = mk;
+  document.querySelectorAll('.row').forEach(r => r.classList.remove('on'));
+  const el = document.getElementById('r'+img.id);
+  if (el) { el.classList.add('on'); el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  map.panTo([img.gps.lat,img.gps.lon]);
+  document.getElementById('stAlt').textContent = img.gps.alt!=null ? img.gps.alt.toFixed(1)+' m' : '—';
+}
+
+// ── Flight path ───────────────────────────────────────────────────────────────
+function bearing(la1,lo1,la2,lo2) {
+  const r=Math.PI/180, dl=(lo2-lo1)*r;
+  const y=Math.sin(dl)*Math.cos(la2*r);
+  const x=Math.cos(la1*r)*Math.sin(la2*r)-Math.sin(la1*r)*Math.cos(la2*r)*Math.cos(dl);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+function drawFP() {
+  fpLayer.clearLayers();
+  const pts = images.filter(i=>i.gps&&i.gps.ts!=null).sort((a,b)=>a.gps.ts-b.gps.ts);
+  if (pts.length < 2) { document.getElementById('btnFP').style.display='none'; return; }
+  document.getElementById('btnFP').style.display='inline-flex';
+  L.polyline(pts.map(i=>[i.gps.lat,i.gps.lon]),{color:'#f0883e',weight:2,opacity:.8,dashArray:'6 5'}).addTo(fpLayer);
+  pts.forEach((img,idx) => {
+    if (!idx || idx===pts.length-1) return;
+    const b = bearing(pts[idx-1].gps.lat,pts[idx-1].gps.lon,img.gps.lat,img.gps.lon);
+    L.marker([img.gps.lat,img.gps.lon],{icon:L.divIcon({className:'',html:`<div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:8px solid #f0883e;opacity:.7;transform:rotate(${b}deg)"></div>`,iconSize:[8,8],iconAnchor:[4,4]}),interactive:false,zIndexOffset:-200}).addTo(fpLayer);
+  });
+  const dot = (img,col,lbl) => L.marker([img.gps.lat,img.gps.lon],{icon:L.divIcon({className:'',html:`<div style="width:11px;height:11px;border-radius:50%;background:${col};border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.5)"></div>`,iconSize:[11,11],iconAnchor:[5.5,5.5]}),interactive:false,zIndexOffset:-100}).addTo(fpLayer).bindTooltip(lbl,{className:'ft-tip',direction:'top'});
+  dot(pts[0],'#3fb950','Start');
+  dot(pts[pts.length-1],'#f85149','End');
+}
+document.getElementById('btnFP').onclick = () => {
+  fpVis=!fpVis;
+  fpVis ? fpLayer.addTo(map) : map.removeLayer(fpLayer);
+  document.getElementById('btnFP').style.opacity = fpVis?'1':'.4';
+};
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function openLB(img) { lbIdx=images.indexOf(img); renderLB(); }
+function renderLB() {
+  if (lbIdx<0||lbIdx>=images.length) return;
+  const img = images[lbIdx];
+  if (!img.fullUrl) {
+    if (img._savedOnly) { img.fullUrl = img.thumb; }
+    else { img.fullUrl = URL.createObjectURL(img.file._jpegBlob||img.file); }
+  }
+  document.getElementById('lbimg').src = img.fullUrl;
+  document.getElementById('lbcount').textContent = `${lbIdx+1} / ${images.length}`;
+  document.getElementById('lbprev').disabled = lbIdx===0;
+  document.getElementById('lbnext').disabled = lbIdx===images.length-1;
+  const proj = img.gps ? getProjectedCoords(img.gps.lat, img.gps.lon) : null;
+  const projDef = EPSG_REGISTRY[activeEPSG] || customEPSGCache[activeEPSG];
+  const projLabel = projDef ? projDef.label : `EPSG:${activeEPSG}`;
+  let m = `<span><strong>${img.file.name}</strong></span>`;
+  if (img.gps) {
+    m += `<span>Lat <strong>${img.gps.lat.toFixed(6)}</strong></span>`;
+    m += `<span>Lon <strong>${img.gps.lon.toFixed(6)}</strong></span>`;
+    if (proj) m += `<span style="color:#58a6ff">${projLabel} E <strong>${Number(proj.E).toLocaleString()}</strong> N <strong>${Number(proj.N).toLocaleString()}</strong></span>`;
+    if (img.gps.alt!=null) m += `<span>Alt <strong>${img.gps.alt.toFixed(1)} m</strong></span>`;
+    if (img.gps.dir!=null) m += `<span>Hdg <strong>${img.gps.dir.toFixed(0)}°</strong></span>`;
+    if (img.gps.model) m += `<span>Cam <strong>${img.gps.model}</strong></span>`;
+  }
+  if (img._savedOnly) m += `<span style="color:#f0883e">⚠ thumbnail only</span>`;
+  document.getElementById('lbmeta').innerHTML = m;
+  document.getElementById('lb').classList.add('open');
+  if (img.gps && img.marker) selImg(img, img.marker);
+}
+document.getElementById('lbprev').onclick  = () => { lbIdx--; renderLB(); };
+document.getElementById('lbnext').onclick  = () => { lbIdx++; renderLB(); };
+document.getElementById('lbclose').onclick = () => document.getElementById('lb').classList.remove('open');
+document.getElementById('lb').onclick = e => { if(e.target===document.getElementById('lb')) document.getElementById('lb').classList.remove('open'); };
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lb').classList.contains('open')) return;
+  if (e.key==='ArrowLeft' && lbIdx>0) { lbIdx--; renderLB(); }
+  else if (e.key==='ArrowRight' && lbIdx<images.length-1) { lbIdx++; renderLB(); }
+  else if (e.key==='Escape') document.getElementById('lb').classList.remove('open');
+});
+
+// ── Sidebar groups ────────────────────────────────────────────────────────────
+// groups: Map of groupKey → { label, collapsed, el(grp div), body(grp-body div), count }
+const groups = new Map();
+
+function getFolderKey(file) {
+  // webkitRelativePath gives "FolderName/sub/file.jpg"
+  // For files without a path, use "Ungrouped"
+  if (file.webkitRelativePath) {
+    const parts = file.webkitRelativePath.split('/');
+    // Use full path minus filename as the key, joined with " / "
+    return parts.length > 1 ? parts.slice(0, -1).join(' / ') : 'Root';
+  }
+  return 'Images';
+}
+
+function getOrCreateGroup(key) {
+  if (groups.has(key)) return groups.get(key);
+
+  const list = document.getElementById('sblist');
+  const proc = list.querySelector('.proc');
+
+  const grp = document.createElement('div');
+  grp.className = 'grp';
+  grp.dataset.key = key;
+
+  const hd = document.createElement('div');
+  hd.className = 'grp-hd';
+
+  const arrow = document.createElement('span');
+  arrow.className = 'grp-arrow open';
+  arrow.textContent = '▶';
+
+  const label = document.createElement('span');
+  label.className = 'grp-label';
+  label.textContent = key;
+
+  const count = document.createElement('span');
+  count.className = 'grp-count';
+  count.textContent = '0';
+
+  const editBtn = document.createElement('span');
+  editBtn.className = 'grp-edit';
+  editBtn.textContent = '✎';
+  editBtn.title = 'Rename group';
+
+  const visBtn = document.createElement('div');
+  visBtn.className = 'grp-vis';
+  visBtn.title = 'Toggle visibility on map';
+  visBtn.textContent = '✓';
+
+  hd.appendChild(arrow);
+  hd.appendChild(label);
+  hd.appendChild(count);
+  hd.appendChild(visBtn);
+  hd.appendChild(editBtn);
+
+  const body = document.createElement('div');
+  body.className = 'grp-body';
+
+  grp.appendChild(hd);
+  grp.appendChild(body);
+
+  if (proc) list.insertBefore(grp, proc); else list.appendChild(grp);
+
+  const state = { label: key, collapsed: false, visible: true, el: grp, body, count: 0, countEl: count, arrowEl: arrow, labelEl: label, visEl: visBtn };
+  groups.set(key, state);
+
+  // Toggle collapse
+  hd.onclick = (e) => {
+    if (e.target === editBtn || e.target === visBtn) return;
+    state.collapsed = !state.collapsed;
+    body.style.display = state.collapsed ? 'none' : '';
+    arrow.classList.toggle('open', !state.collapsed);
+  };
+
+  // Visibility toggle — show/hide markers for this group
+  visBtn.onclick = (e) => {
+    e.stopPropagation();
+    state.visible = !state.visible;
+    visBtn.classList.toggle('off', !state.visible);
+    visBtn.textContent = state.visible ? '✓' : '';
+    // Show/hide all markers belonging to this group
+    images.filter(i => i._groupKey === key && i.marker).forEach(i => {
+      if (state.visible) i.marker.addTo(mLayer);
+      else mLayer.removeLayer(i.marker);
+    });
+  };
+
+  // Rename on edit button click
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
+    const input = document.createElement('input');
+    input.className = 'grp-label-input';
+    input.value = state.label;
+    label.replaceWith(input);
+    input.focus(); input.select();
+    const finish = () => {
+      const newLabel = input.value.trim() || state.label;
+      state.label = newLabel;
+      label.textContent = newLabel;
+      input.replaceWith(label);
+    };
+    input.onblur = finish;
+    input.onkeydown = e => { if(e.key==='Enter') input.blur(); if(e.key==='Escape'){input.value=state.label;input.blur();} };
+  };
+
+  return state;
+}
+
+function addRow(img) {
+  const key = getFolderKey(img.file);
+  const grp = getOrCreateGroup(key);
+  img._groupKey = key;
+
+  grp.count++;
+  grp.countEl.textContent = grp.count;
+
+  const el = document.createElement('div');
+  el.id = 'r'+img.id; el.className = 'row'+(img.gps?'':' ng');
+
+  const th = document.createElement('img'); th.src = img.thumb||'';
+  el.appendChild(th);
+
+  const meta = document.createElement('div'); meta.className='rmeta';
+  if (img.gps) {
+    const proj = getProjectedCoords(img.gps.lat, img.gps.lon);
+    meta.innerHTML = `<div class="rname">${img.file.name}</div><div class="rsub">E ${proj?Number(proj.E).toLocaleString():'—'} &nbsp; N ${proj?Number(proj.N).toLocaleString():'—'}</div>`;
+  } else {
+    meta.innerHTML = `<div class="rname">${img.file.name}</div><div class="rsub warn">No GPS data</div>`;
+  }
+  el.appendChild(meta);
+
+  const dot = document.createElement('div'); dot.className='rdot '+(img.gps?'g':'x');
+  el.appendChild(dot);
+
+  if (img.gps) el.onclick = () => { selImg(img,img.marker); img.marker.openPopup(); };
+
+  grp.body.appendChild(el);
+}
+
+function updStats() {
+  const tot=images.length, gps=images.filter(i=>i.gps).length;
+  document.getElementById('stTot').textContent = tot;
+  document.getElementById('stGps').textContent = gps;
+  document.getElementById('stNone').textContent = tot-gps;
+  document.getElementById('hstats').style.display = 'flex';
+  document.getElementById('sbcnt').textContent = tot;
+  document.getElementById('btnClear').style.display = 'inline-flex';
+  document.getElementById('btnSave').style.display = 'inline-flex';
+}
+
+function resetState() {
+  images.forEach(i => { if(i.fullUrl && !i._savedOnly) URL.revokeObjectURL(i.fullUrl); });
+  images=[]; activeMarker=null; lbIdx=-1; fpVis=true;
+  groups.clear();
+  mLayer.clearLayers(); fpLayer.clearLayers();
+  if (!map.hasLayer(fpLayer)) fpLayer.addTo(map);
+  document.getElementById('lb').classList.remove('open');
+  document.getElementById('hstats').style.display = 'none';
+  document.getElementById('sbcnt').textContent = '—';
+  document.getElementById('btnClear').style.display = 'none';
+  document.getElementById('btnSave').style.display = 'none';
+  document.getElementById('btnFP').style.display = 'none';
+  document.getElementById('stAlt').textContent = '—';
+}
+
+// ── Clear ─────────────────────────────────────────────────────────────────────
+document.getElementById('btnClear').onclick = () => {
+  resetState();
+  document.getElementById('sblist').innerHTML = `<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 2L8 7H3l2 5-2 5h5l4 5 4-5h5l-2-5 2-5h-5L12 2z"/><circle cx="12" cy="12" r="2.5"/></svg><p>Click <b>Open Images</b><br>and select your drone photos</p></div>`;
+  document.getElementById('fileIn').value = '';
+  map.setView([0,0],2);
+};
+
+// ── GeoTIFF ───────────────────────────────────────────────────────────────────
+document.getElementById('btnGtiff').onclick = () => { document.getElementById('gtiffIn').value=''; document.getElementById('gtiffIn').click(); };
+document.getElementById('gtiffIn').onchange = async function() {
+  if (!this.files||!this.files[0]) return;
+  const btn = document.getElementById('btnGtiff');
+  btn.textContent='Loading…'; btn.disabled=true;
+  try {
+    const gr = await parseGeoraster(await this.files[0].arrayBuffer());
+    if (gtLayer) { map.removeLayer(gtLayer); gtLayer=null; }
+    gtLayer = new GeoRasterLayer({ georaster:gr, opacity:1, resolution:256,
+      pixelValuesToColorFn: v => {
+        const [r,g,b,a] = v.length>=3 ? [v[0],v[1],v[2],v[3]??255] : [v[0],v[0],v[0],255];
+        if (r==null) return null;
+        return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${(a/255).toFixed(3)})`;
+      }
+    });
+    gtLayer.addTo(map); map.fitBounds(gtLayer.getBounds());
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> ${this.files[0].name.length>20?this.files[0].name.slice(0,18)+'…':this.files[0].name}`;
+    btn.disabled=false;
+    document.getElementById('btnRmGtiff').style.display='inline-flex';
+  } catch(e) {
+    alert('Could not load GeoTIFF:\n'+e.message);
+    btn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> GeoTIFF`;
+    btn.disabled=false;
+  }
+};
+document.getElementById('btnRmGtiff').onclick = () => {
+  if (gtLayer) { map.removeLayer(gtLayer); gtLayer=null; }
+  document.getElementById('btnRmGtiff').style.display='none';
+  document.getElementById('btnGtiff').innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> GeoTIFF`;
+  document.getElementById('gtiffIn').value='';
+};
+
+// ── Thumbnail helper ──────────────────────────────────────────────────────────
+async function mkThumb(src, max=200) {
+  try {
+    const bmp = await createImageBitmap(src,{resizeWidth:max,resizeHeight:max,resizeQuality:'medium'});
+    const c = document.createElement('canvas'); c.width=bmp.width; c.height=bmp.height;
+    c.getContext('2d').drawImage(bmp,0,0); bmp.close();
+    return c.toDataURL('image/jpeg',.75);
+  } catch {
+    return new Promise(res => {
+      const u=URL.createObjectURL(src), i=new Image();
+      i.onload = () => {
+        const s=Math.min(max/i.width,max/i.height,1);
+        const c=document.createElement('canvas'); c.width=Math.round(i.width*s); c.height=Math.round(i.height*s);
+        c.getContext('2d').drawImage(i,0,0,c.width,c.height);
+        URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg',.75));
+      };
+      i.onerror = () => { URL.revokeObjectURL(u); res(null); };
+      i.src = u;
+    });
+  }
+}
+
+// ── File processing ───────────────────────────────────────────────────────────
+async function processOne(file) {
+  try {
+    const isHeic = /\.heic$/i.test(file.name);
+    const gps = await getGPS(file);
+    if (isHeic) {
+      const jpegBlob = await heic2any({ blob:file, toType:'image/jpeg', quality:0.85 })
+        .then(b => Array.isArray(b)?b[0]:b);
+      file._jpegBlob = jpegBlob;
+      const thumb = await mkThumb(jpegBlob);
+      return { gps, thumb };
+    }
+    const thumb = await mkThumb(file);
+    return { gps, thumb };
+  } catch(e) {
+    console.warn('processOne failed', file.name, e);
+    return { gps:null, thumb:null };
+  }
+}
+
+async function processFiles(fileList, gpsOnly=false) {
+  const files = Array.from(fileList).filter(f => /\.(jpe?g|tiff?|heic)$/i.test(f.name));
+  if (!files.length) { alert(`No JPG/TIFF/HEIC files found (${fileList.length} files selected).`); return; }
+
+  // Show a progress bar at the top of the sidebar without wiping existing content
+  const list = document.getElementById('sblist');
+  const progEl = document.createElement('div');
+  progEl.className = 'proc';
+  progEl.innerHTML = `<p>${gpsOnly?'Scanning':'Loading'} <span id="pd">0</span> of ${files.length}…</p><div class="pbar"><div class="pfill" id="pf"></div></div>`;
+  list.insertBefore(progEl, list.firstChild);
+
+  // Hide empty state if present
+  const empty = list.querySelector('.empty');
+  if (empty) empty.style.display = 'none';
+
+  const Q=4; let done=0, active=0, found=0;
+  const queue=[...files];
+
+  await new Promise(finish => {
+    function next() {
+      while (active<Q && queue.length) {
+        const f = queue.shift(); active++;
+        processOne(f).then(({gps,thumb}) => {
+          done++; active--;
+          const pf=document.getElementById('pf');
+          if(pf) pf.style.width=`${Math.round(done/files.length*100)}%`;
+
+          if (gpsOnly && !gps) {
+            if(done===files.length) finish(); else next();
+            return;
+          }
+
+          if (thumb) {
+            const img = { id:++uid, file:f, gps, thumb, fullUrl:null, marker:null };
+            images.push(img);
+            if (gps) { addMarker(img); found++; }
+            addRow(img);
+          }
+
+          const pd=document.getElementById('pd');
+          if(pd) pd.textContent=done;
+          updStats();
+          if(done===files.length) finish(); else next();
+        }).catch(() => { done++; active--; if(done===files.length) finish(); else next(); });
+      }
+    }
+    next();
+  });
+
+  // Remove the progress bar
+  progEl.remove();
+
+  if (gpsOnly) {
+    toast(`✓ Scanned ${files.length} images — ${found} had GPS data`, found>0?'#3fb950':'#f0883e');
+  } else {
+    toast(`✓ Added ${found} georeferenced images`);
+  }
+
+  const geo = images.filter(i=>i.gps);
+  if (geo.length===1) map.setView([geo[0].gps.lat,geo[0].gps.lon],17);
+  else if (geo.length>1) map.fitBounds(L.latLngBounds(geo.map(i=>[i.gps.lat,i.gps.lon])),{padding:[60,60]});
+  drawFP();
+  reapplyFilterIfActive();
+}
+
+// ── Save Project ──────────────────────────────────────────────────────────────
+const FSAPI = 'showOpenFilePicker' in window;
+
+document.getElementById('btnSave').onclick = async () => {
+  if (!images.length) { alert('No images loaded.'); return; }
+
+  // Store file handles in IndexedDB (Chrome/Edge)
+  if (FSAPI) {
+    const handles = {};
+    images.forEach(img => { if (img.file._handle) handles[img.file.name] = img.file._handle; });
+    if (Object.keys(handles).length) await idbSet('handles', handles);
+  }
+
+  const project = {
+    v: 2,
+    savedAt: new Date().toISOString(),
+    mapView: { lat:map.getCenter().lat, lng:map.getCenter().lng, zoom:map.getZoom() },
+    groupLabels: Object.fromEntries([...groups.entries()].map(([k,g]) => [k, g.label])),
+    groupVisible: Object.fromEntries([...groups.entries()].map(([k,g]) => [k, g.visible])),
+    images: images.map(img => ({ name:img.file.name, thumb:img.thumb, gps:img.gps, groupKey:img._groupKey }))
+  };
+  const blob = new Blob([JSON.stringify(project)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`mapshot_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(url);
+  toast(FSAPI ? '✓ Project saved — full-res handles stored' : '✓ Project saved');
+};
+
+// ── Load Project ──────────────────────────────────────────────────────────────
+document.getElementById('btnLoad').onclick = () => { document.getElementById('projIn').value=''; document.getElementById('projIn').click(); };
+document.getElementById('projIn').onchange = async function() {
+  if (!this.files||!this.files[0]) return;
+  try { await loadProject(JSON.parse(await this.files[0].text())); }
+  catch(e) { alert('Could not load project:\n'+e.message); }
+};
+
+async function loadProject(project) {
+  if (!project.images) { alert('Invalid project file.'); return; }
+  resetState();
+  document.getElementById('sblist').innerHTML = `<div class="proc"><p>Loading project…</p><div class="pbar"><div class="pfill" id="pf" style="width:100%"></div></div></div>`;
+
+  // Try to recover file handles
+  let handles = {};
+  if (FSAPI) {
+    try { handles = await idbGet('handles') || {}; } catch(e) {}
+    // Request permission for all handles in one pass
+    for (const [name, handle] of Object.entries(handles)) {
+      try {
+        const p = await handle.queryPermission({mode:'read'});
+        if (p !== 'granted') await handle.requestPermission({mode:'read'});
+      } catch(e) { delete handles[name]; }
+    }
+  }
+
+  let resolved = 0;
+  for (const saved of project.images) {
+    const handle = handles[saved.name];
+    let file = null;
+    if (handle) {
+      try { file = await handle.getFile(); file._handle = handle; resolved++; } catch(e) {}
+    }
+    const fakeFile = file || { name:saved.name };
+    // Restore the original groupKey so addRow puts it in the right group
+    if (saved.groupKey) fakeFile.webkitRelativePath = saved.groupKey + '/' + saved.name;
+    const img = { id:++uid, file:fakeFile, gps:saved.gps||null, thumb:saved.thumb, fullUrl:null, marker:null, _savedOnly:!file };
+    images.push(img);
+    if (img.gps) addMarker(img);
+    addRow(img);
+  }
+
+  // Restore renamed group labels
+  if (project.groupLabels) {
+    for (const [key, label] of Object.entries(project.groupLabels)) {
+      const grp = groups.get(key);
+      if (grp && label !== key) { grp.label = label; grp.labelEl.textContent = label; }
+    }
+  }
+  if (project.groupVisible) {
+    for (const [key, visible] of Object.entries(project.groupVisible)) {
+      const grp = groups.get(key);
+      if (grp && !visible) {
+        grp.visible = false;
+        grp.visEl.classList.add('off'); grp.visEl.textContent = '';
+        images.filter(i => i._groupKey === key && i.marker).forEach(i => mLayer.removeLayer(i.marker));
+      }
+    }
+  }
+
+  updStats();
+  if (project.mapView) map.setView([project.mapView.lat,project.mapView.lng],project.mapView.zoom);
+  else {
+    const geo=images.filter(i=>i.gps);
+    if(geo.length===1) map.setView([geo[0].gps.lat,geo[0].gps.lon],17);
+    else if(geo.length>1) map.fitBounds(L.latLngBounds(geo.map(i=>[i.gps.lat,i.gps.lon])),{padding:[60,60]});
+  }
+  drawFP();
+  const total = images.length;
+  if (resolved===total) toast(`✓ All ${total} images loaded at full resolution`);
+  else if (resolved>0) toast(`✓ ${resolved}/${total} at full res — rest show thumbnails`, '#f0883e');
+  else toast('Project loaded — thumbnails only (open in Chrome for full-res)', '#f0883e');
+}
+
+// ── Open Images ───────────────────────────────────────────────────────────────
+document.getElementById('btnOpen').onclick = async () => {
+  if (FSAPI) {
+    try {
+      const handles = await window.showOpenFilePicker({
+        multiple: true,
+        types: [{ description:'Images', accept:{'image/*':['.jpg','.jpeg','.tif','.tiff','.heic']} }]
+      });
+      const files = await Promise.all(handles.map(async h => {
+        const f = await h.getFile(); f._handle = h; return f;
+      }));
+      if (files.length) processFiles(files, false);
+    } catch(e) {
+      if (e.name !== 'AbortError') { document.getElementById('fileIn').value=''; document.getElementById('fileIn').click(); }
+    }
+  } else {
+    document.getElementById('fileIn').value=''; document.getElementById('fileIn').click();
+  }
+};
+document.getElementById('fileIn').onchange = function() { if(this.files&&this.files.length) processFiles(this.files, false); };
+
+// ── Scan Folder ───────────────────────────────────────────────────────────────
+document.getElementById('btnFolder').onclick = () => { document.getElementById('folderIn').value=''; document.getElementById('folderIn').click(); };
+document.getElementById('folderIn').onchange = function() { if(this.files&&this.files.length) processFiles(this.files, true); };
+
+// ── Layer buttons ─────────────────────────────────────────────────────────────
+document.getElementById('lDark').onclick   = () => setLayer('dark');
+document.getElementById('lSat').onclick    = () => setLayer('satellite');
+document.getElementById('lHybrid').onclick = () => setLayer('hybrid');
+
+// ── Drag-drop ─────────────────────────────────────────────────────────────────
+document.getElementById('map').ondragover = e => { e.preventDefault(); e.dataTransfer.dropEffect='copy'; };
+document.getElementById('map').ondrop = e => { e.preventDefault(); if(e.dataTransfer.files.length) processFiles(e.dataTransfer.files, false); };
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+let activeFilters = {};
+
+// Toggle filter panel
+document.getElementById('btnFilter').onclick = () => {
+  document.getElementById('filter-panel').classList.toggle('open');
+  rebuildGroupChips();
+};
+
+// GPS chips — single select
+document.querySelectorAll('.chip[data-gps]').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('.chip[data-gps]').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+  };
+});
+
+function rebuildGroupChips() {
+  const container = document.getElementById('fp-groups');
+  const row = document.getElementById('fp-group-row');
+  if (groups.size === 0) { row.style.display='none'; return; }
+  row.style.display = '';
+  container.innerHTML = '';
+  groups.forEach((grp, key) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip on';
+    chip.dataset.grpKey = key;
+    chip.textContent = grp.label;
+    chip.onclick = () => chip.classList.toggle('on');
+    container.appendChild(chip);
+  });
+}
+
+function getFilters() {
+  const name     = document.getElementById('fp-name').value.trim().toLowerCase();
+  const camera   = document.getElementById('fp-camera').value.trim().toLowerCase();
+  const dateFrom = document.getElementById('fp-date-from').value;
+  const dateTo   = document.getElementById('fp-date-to').value;
+  const altMin   = document.getElementById('fp-alt-min').value;
+  const altMax   = document.getElementById('fp-alt-max').value;
+  const gpsMode  = document.querySelector('.chip[data-gps].on')?.dataset.gps || 'any';
+  const groupChips = [...document.querySelectorAll('.chip[data-grpKey]')];
+  const selectedGroups = groupChips.length > 0 ? groupChips.filter(c=>c.classList.contains('on')).map(c=>c.dataset.grpKey) : null;
+  return { name, camera, dateFrom, dateTo, altMin: altMin!==''?+altMin:null, altMax: altMax!==''?+altMax:null, gpsMode, selectedGroups };
+}
+
+function countActiveFilters(f) {
+  let n = 0;
+  if (f.name) n++;
+  if (f.camera) n++;
+  if (f.dateFrom || f.dateTo) n++;
+  if (f.altMin!=null || f.altMax!=null) n++;
+  if (f.gpsMode !== 'any') n++;
+  if (f.selectedGroups && f.selectedGroups.length < groups.size) n++;
+  return n;
+}
+
+function imageMatchesFilter(img, f) {
+  // Name
+  if (f.name && !img.file.name.toLowerCase().includes(f.name)) return false;
+  // Camera
+  if (f.camera) {
+    const cam = ((img.gps?.make||'') + ' ' + (img.gps?.model||'')).toLowerCase();
+    if (!cam.includes(f.camera)) return false;
+  }
+  // GPS mode
+  if (f.gpsMode === 'yes' && !img.gps) return false;
+  if (f.gpsMode === 'no'  &&  img.gps) return false;
+  // Altitude
+  if (img.gps?.alt != null) {
+    if (f.altMin != null && img.gps.alt < f.altMin) return false;
+    if (f.altMax != null && img.gps.alt > f.altMax) return false;
+  } else if (f.altMin != null || f.altMax != null) {
+    return false; // no altitude data, can't match range
+  }
+  // Date
+  if (img.gps?.ts) {
+    const d = new Date(img.gps.ts);
+    const ds = d.toISOString().slice(0,10);
+    if (f.dateFrom && ds < f.dateFrom) return false;
+    if (f.dateTo   && ds > f.dateTo)   return false;
+  } else if (f.dateFrom || f.dateTo) {
+    return false;
+  }
+  // Group
+  if (f.selectedGroups && !f.selectedGroups.includes(img._groupKey)) return false;
+  return true;
+}
+
+function applyFilter() {
+  const f = getFilters();
+  activeFilters = f;
+  const n = countActiveFilters(f);
+  const badge = document.getElementById('filter-badge');
+  badge.style.display = n > 0 ? 'inline' : 'none';
+  badge.textContent = n;
+  document.getElementById('btnFilter').style.color = n > 0 ? '#f0883e' : '';
+  document.getElementById('btnFilter').style.borderColor = n > 0 ? '#f0883e50' : '';
+
+  let shown = 0, hidden = 0;
+  images.forEach(img => {
+    const el = document.getElementById('r'+img.id);
+    const match = imageMatchesFilter(img, f);
+    if (el) el.style.display = match ? '' : 'none';
+    // Also hide/show map marker — respects group visibility too
+    if (img.marker) {
+      const grp = groups.get(img._groupKey);
+      const grpVisible = !grp || grp.visible;
+      if (match && grpVisible) { if (!mLayer.hasLayer(img.marker)) img.marker.addTo(mLayer); }
+      else { if (mLayer.hasLayer(img.marker)) mLayer.removeLayer(img.marker); }
+    }
+    match ? shown++ : hidden++;
+  });
+
+  // Update group counts to reflect filtered totals
+  groups.forEach((grp, key) => {
+    const cnt = images.filter(i => i._groupKey===key && imageMatchesFilter(i,f)).length;
+    grp.countEl.textContent = cnt;
+  });
+
+  document.getElementById('sbcnt').textContent = `${shown}`;
+  toast(`Filter: ${shown} shown, ${hidden} hidden`, n>0?'#f0883e':'#3fb950');
+}
+
+function clearFilter() {
+  document.getElementById('fp-name').value = '';
+  document.getElementById('fp-camera').value = '';
+  document.getElementById('fp-date-from').value = '';
+  document.getElementById('fp-date-to').value = '';
+  document.getElementById('fp-alt-min').value = '';
+  document.getElementById('fp-alt-max').value = '';
+  document.querySelectorAll('.chip[data-gps]').forEach((c,i) => c.classList.toggle('on', i===0));
+  document.querySelectorAll('.chip[data-grpKey]').forEach(c => c.classList.add('on'));
+  activeFilters = {};
+  document.getElementById('filter-badge').style.display = 'none';
+  document.getElementById('btnFilter').style.color = '';
+  document.getElementById('btnFilter').style.borderColor = '';
+  // Restore all rows and markers
+  images.forEach(img => {
+    const el = document.getElementById('r'+img.id);
+    if (el) el.style.display = '';
+    if (img.marker) {
+      const grp = groups.get(img._groupKey);
+      if (!grp || grp.visible) { if (!mLayer.hasLayer(img.marker)) img.marker.addTo(mLayer); }
+    }
+  });
+  groups.forEach(grp => { grp.countEl.textContent = grp.count; });
+  document.getElementById('sbcnt').textContent = images.length;
+  toast('Filter cleared');
+}
+
+document.getElementById('fp-apply').onclick = applyFilter;
+document.getElementById('fp-clear').onclick  = clearFilter;
+
+// Re-apply active filter when new images are added
+function reapplyFilterIfActive() {
+  if (Object.keys(activeFilters).length > 0) applyFilter();
+}
+
+
+// ── EPSG selector ─────────────────────────────────────────────────────────────
+function setActiveEPSG(code) {
+  activeEPSG = code;
+  const def = EPSG_REGISTRY[code] || customEPSGCache[code];
+  const shortLabel = def ? def.label.replace(/^(GDA2020|GDA94|AGD84|AGD66|WGS84)\s*\/\s*/,'') : `EPSG:${code}`;
+  document.getElementById('stProjLabel').textContent = shortLabel;
+  // Refresh sidebar rows
+  images.filter(i=>i.gps).forEach(img => {
+    const el = document.getElementById('r'+img.id);
+    if (!el) return;
+    const proj = getProjectedCoords(img.gps.lat, img.gps.lon);
+    const sub = el.querySelector('.rsub');
+    if (sub) sub.textContent = `E ${proj?Number(proj.E).toLocaleString():'—'}  N ${proj?Number(proj.N).toLocaleString():'—'}`;
+  });
+  if (activeMarker) activeMarker.getPopup()?.setContent(() => makePU(activeMarker._img, activeMarker));
+  toast(`Projection: ${def?.label || 'EPSG:'+code}`);
+}
+
+function buildEPSGModal() {
+  const tabs = document.getElementById('epsg-tabs');
+  const list = document.getElementById('epsg-list');
+  const groupKeys = [...new Set(Object.values(EPSG_REGISTRY).map(p=>p.group))];
+  let activeGroup = 'AGD84 / AMG';
+  tabs.innerHTML = '';
+
+  function renderGroup(group) {
+    activeGroup = group;
+    tabs.querySelectorAll('.etab').forEach(t => t.classList.toggle('on', t.dataset.g===group));
+    const search = document.getElementById('epsg-search').value.trim().toLowerCase();
+    list.innerHTML = '';
+    Object.entries(EPSG_REGISTRY)
+      .filter(([code,p]) => p.group===group && (!search || p.label.toLowerCase().includes(search) || code.includes(search)))
+      .sort(([a],[b]) => +a - +b)
+      .forEach(([code,p]) => {
+        const row = document.createElement('div');
+        row.style.cssText = `padding:7px 10px;border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border:1px solid ${+code===activeEPSG?'#58a6ff':'transparent'}`;
+        row.innerHTML = `<span style="font-size:11px;color:#e6edf3">${p.label}</span><span style="font-size:10px;color:#7d8590">EPSG:${code}</span>`;
+        row.onmouseover=()=>row.style.background='#1c2128';
+        row.onmouseout=()=>row.style.background='';
+        row.onclick=()=>{ setActiveEPSG(+code); closeEPSGModal(); };
+        list.appendChild(row);
+      });
+  }
+
+  groupKeys.forEach(g => {
+    const t = document.createElement('button');
+    t.className='chip etab'+(g===activeGroup?' on':'');
+    t.dataset.g=g; t.textContent=g;
+    t.onclick=()=>renderGroup(g);
+    tabs.appendChild(t);
+  });
+  renderGroup(activeGroup);
+  document.getElementById('epsg-search').oninput = () => renderGroup(activeGroup);
+  document.getElementById('epsg-lookup').onclick = async () => {
+    const val = document.getElementById('epsg-search').value.trim();
+    const code = parseInt(val);
+    if (!code) { toast('Enter a valid EPSG code', '#f85149'); return; }
+    if (EPSG_REGISTRY[code]) { setActiveEPSG(code); closeEPSGModal(); return; }
+    const btn = document.getElementById('epsg-lookup');
+    btn.textContent='…'; btn.disabled=true;
+    const result = await lookupEPSG(code);
+    btn.textContent='Look up'; btn.disabled=false;
+    if (result) { toast(`Found: ${result.label}`); setActiveEPSG(code); closeEPSGModal(); }
+    else toast(`EPSG:${code} not found or not supported`, '#f85149');
+  };
+}
+
+function closeEPSGModal() { document.getElementById('epsg-modal').style.display='none'; }
+document.getElementById('stProj').onclick = () => { document.getElementById('epsg-modal').style.display='flex'; buildEPSGModal(); };
+document.getElementById('epsg-close').onclick = closeEPSGModal;
+document.getElementById('epsg-modal').onclick = e => { if(e.target===document.getElementById('epsg-modal')) closeEPSGModal(); };
+setActiveEPSG(20355); // initialise with AMG Zone 55
+
+let sbOpen = true;
+const sbEl = document.getElementById('sb');
+const sbToggle = document.getElementById('sb-toggle');
+
+sbToggle.onclick = () => {
+  sbOpen = !sbOpen;
+  sbEl.classList.toggle('collapsed', !sbOpen);
+  sbToggle.textContent = sbOpen ? '❯' : '❮';
+  sbToggle.style.right = sbOpen ? '0' : '-18px';
+  setTimeout(() => map.invalidateSize(), 220);
+};
+
+// Drag resize
+const resizeHandle = document.getElementById('sb-resize');
+let resizing = false, startX = 0, startW = 0;
+resizeHandle.onmousedown = e => {
+  resizing = true; startX = e.clientX; startW = sbEl.offsetWidth;
+  document.body.style.cursor = 'ew-resize';
+  e.preventDefault();
+};
+document.onmousemove = e => {
+  if (!resizing) return;
+  const delta = startX - e.clientX; // dragging left = wider
+  const newW = Math.max(180, Math.min(600, startW + delta));
+  sbEl.style.width = newW + 'px';
+};
+document.onmouseup = () => {
+  if (resizing) { resizing = false; document.body.style.cursor = ''; map.invalidateSize(); }
+};
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initMap();
+</script>
+</body>
+</html>
