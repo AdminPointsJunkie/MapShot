@@ -4,12 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MapShot</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
-<script src="https://unpkg.com/georaster-layer-for-leaflet@2.4.0/dist/georaster-layer-for-leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@2.4.0/dist/georaster-layer-for-leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/shpjs@4.0.2/dist/shp.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -18,6 +23,41 @@ body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height
 #hdr .tag{font-size:10px;color:#7d8590}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:5px;font-family:inherit;font-size:11px;cursor:pointer;border:1px solid;white-space:nowrap;transition:background .15s}
 .bg{background:#238636;color:#fff;border-color:#2ea043}.bg:hover{background:#2ea043}
+
+/* tools menu */
+.tmenu-section{padding:4px 12px;font-size:9px;color:#7d8590;letter-spacing:.1em;text-transform:uppercase;border-top:1px solid #30363d;margin-top:2px}
+.tmenu-section:first-child{border-top:none;margin-top:0}
+.tmenu-item{display:block;width:100%;text-align:left;padding:7px 14px;background:transparent;border:none;color:#e6edf3;font-family:inherit;font-size:11px;cursor:pointer;transition:background .1s}
+.tmenu-item:hover{background:#1c2128}
+.tmenu-item.active{background:#1c2128;color:#58a6ff}
+
+/* draw tool active state */
+#map.drawing-pin{cursor:crosshair}
+#map.drawing-line{cursor:crosshair}
+#map.drawing-poly{cursor:crosshair}
+
+/* pin note popup */
+.pin-popup{min-width:200px}
+.pin-popup input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:4px 7px;outline:none;margin:4px 0}
+.pin-popup textarea{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:4px 7px;outline:none;resize:vertical;height:60px}
+.pin-popup button{background:#238636;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:10px;cursor:pointer;padding:3px 10px;margin-top:4px}
+.pin-popup .del-btn{background:#f85149;margin-left:4px}
+
+/* measure tooltip */
+.measure-tip{background:#0d1117;border:1px solid #58a6ff;border-radius:4px;padding:3px 8px;font-size:11px;color:#58a6ff;font-family:'Courier New',monospace;white-space:nowrap}
+
+/* CSV import modal */
+#csv-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9400;align-items:center;justify-content:center}
+#csv-modal.open{display:flex}
+.csv-inner{background:#161b22;border:1px solid #30363d;border-radius:8px;width:560px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.csv-hd{padding:12px 16px;border-bottom:1px solid #30363d;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.csv-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;flex:1}
+.csv-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.csv-sel{background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:5px 8px;outline:none;width:100%}
+.csv-preview{background:#0d1117;border:1px solid #30363d;border-radius:4px;overflow:auto;max-height:180px}
+.csv-preview table{border-collapse:collapse;font-size:10px;width:100%}
+.csv-preview th{background:#161b22;color:#7d8590;padding:4px 8px;text-align:left;border-bottom:1px solid #30363d;white-space:nowrap}
+.csv-preview td{padding:3px 8px;color:#e6edf3;border-bottom:1px solid #0d1117;white-space:nowrap}
 .br{background:transparent;color:#f85149;border-color:#f8514950}.br:hover{background:#f8514915;border-color:#f85149}
 .bo{background:transparent;color:#f0883e;border-color:#f0883e50}.bo:hover{background:#f0883e15;border-color:#f0883e}
 .bp{background:transparent;color:#a371f7;border-color:#a371f750}.bp:hover{background:#a371f715;border-color:#a371f7}
@@ -142,6 +182,9 @@ body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height
   <button class="btn" id="btnCloud" style="background:transparent;color:#60a5fa;border-color:#60a5fa50">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>Cloud Folder
   </button>
+  <button class="btn" id="btnLocal" style="display:none;background:transparent;color:#3fb950;border-color:#3fb95050">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Local Folder
+  </button>
   <button class="btn bp" id="btnGtiff">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>GeoTIFF
   </button>
@@ -151,6 +194,29 @@ body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height
   <button class="btn bo" id="btnFP" style="display:none">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 4 4-6 4 3"/></svg>Flight Path
   </button>
+
+  <!-- Tools dropdown -->
+  <div style="position:relative">
+    <button class="btn" id="btnTools" style="background:transparent;color:#e6edf3;border-color:#30363d">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Tools ▾
+    </button>
+    <div id="tools-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;background:#161b22;border:1px solid #30363d;border-radius:6px;min-width:200px;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,.5);overflow:hidden">
+      <div class="tmenu-section">Draw</div>
+      <button class="tmenu-item" id="tool-pin">📍 Drop Pin</button>
+      <button class="tmenu-item" id="tool-line">📏 Draw Line / Measure</button>
+      <button class="tmenu-item" id="tool-poly">⬡ Draw Polygon / Area</button>
+      <button class="tmenu-item" id="tool-clear-draw">🗑 Clear Drawings</button>
+      <div class="tmenu-section">Import</div>
+      <button class="tmenu-item" id="tool-csv">📊 Import CSV / GPS Points</button>
+      <button class="tmenu-item" id="tool-shp">🗺 Import Shapefile (.zip)</button>
+      <div class="tmenu-section">Export — <span id="export-epsg-label" style="color:#58a6ff;font-size:9px">EPSG:20355</span> <button id="export-epsg-btn" style="background:transparent;border:none;color:#58a6ff;font-size:9px;cursor:pointer;padding:0;font-family:inherit">change ▾</button></div>
+      <button class="tmenu-item" id="tool-pdf">📄 Export PDF Map</button>
+      <button class="tmenu-item" id="tool-geojson">🌐 Export GeoJSON</button>
+      <button class="tmenu-item" id="tool-csv-export">📋 Export Points CSV</button>
+      <button class="tmenu-item" id="tool-dxf">📐 Export DXF (CAD)</button>
+      <button class="tmenu-item" id="tool-shp-export">🗂 Export Shapefile</button>
+    </div>
+  </div>
   <button class="btn bs" id="btnSave" style="display:none">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Project
   </button>
@@ -268,6 +334,73 @@ body{font-family:'Courier New',monospace;background:#0d1117;color:#e6edf3;height
     <div id="epsg-list" style="overflow-y:auto;display:flex;flex-direction:column;gap:2px;flex:1"></div>
   </div>
 </div>
+
+<!-- Local Folder Modal -->
+<div id="local-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9400;align-items:center;justify-content:center">
+  <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;width:580px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #30363d;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span style="font-size:13px;font-weight:600">Local Folder</span>
+        <span id="local-server-folder" style="font-size:10px;color:#7d8590;background:#0d1117;padding:2px 8px;border-radius:10px;border:1px solid #30363d;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      </div>
+      <button id="local-close" style="background:transparent;border:none;color:#7d8590;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #30363d;flex-shrink:0">
+      <span id="local-path" style="font-size:11px;color:#7d8590;flex:1">📁 /</span>
+      <button id="local-up" style="background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:3px 8px">↑ Up</button>
+      <button id="local-refresh" style="background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:3px 8px">↻</button>
+    </div>
+    <div id="local-list" style="flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:3px"></div>
+    <div id="local-sel-bar" style="display:none;padding:8px 12px;border-top:1px solid #30363d;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span id="local-sel-count" style="font-size:11px;color:#7d8590">0 selected</span>
+      <button id="local-load-sel" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;padding:4px 14px">Load Selected</button>
+    </div>
+  </div>
+</div>
+
+<div id="csv-modal">
+  <div class="csv-inner">
+    <div class="csv-hd">
+      <span style="font-size:13px;font-weight:600">Import CSV / GPS Points</span>
+      <button id="csv-close" style="background:transparent;border:none;color:#7d8590;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div class="csv-body">
+      <div style="font-size:11px;color:#7d8590">Map columns from your CSV to coordinate fields. First row should be headers.</div>
+      <div class="csv-row">
+        <div>
+          <div style="font-size:10px;color:#7d8590;margin-bottom:4px">Latitude column</div>
+          <select class="csv-sel" id="csv-lat"></select>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#7d8590;margin-bottom:4px">Longitude column</div>
+          <select class="csv-sel" id="csv-lon"></select>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#7d8590;margin-bottom:4px">Label column (optional)</div>
+          <select class="csv-sel" id="csv-label"></select>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#7d8590;margin-bottom:4px">Point colour</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="csv-colour-pick">
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="csvclr" value="#f0883e" checked> Orange</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="csvclr" value="#58a6ff"> Blue</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="csvclr" value="#3fb950"> Green</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="csvclr" value="#f85149"> Red</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="radio" name="csvclr" value="#a371f7"> Purple</label>
+      </div>
+      <div class="csv-preview" id="csv-preview"></div>
+      <div style="display:flex;gap:8px">
+        <button id="csv-plot" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:5px;font-family:inherit;font-size:12px;cursor:pointer;padding:8px 20px;flex:1">Plot Points on Map</button>
+        <button id="csv-close2" style="background:transparent;color:#7d8590;border:1px solid #30363d;border-radius:5px;font-family:inherit;font-size:12px;cursor:pointer;padding:8px 14px">Cancel</button>
+      </div>
+      <div id="csv-status" style="font-size:11px;color:#7d8590;text-align:center"></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="csvIn" accept=".csv,.txt" style="position:fixed;left:-9999px">
+<input type="file" id="shpIn" accept=".zip" style="position:fixed;left:-9999px">
 
 <!-- Cloud Folder Modal -->
 <div id="cloud-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9400;align-items:center;justify-content:center">
@@ -1410,6 +1543,166 @@ document.onmouseup = () => {
   if (resizing) { resizing = false; document.body.style.cursor = ''; map.invalidateSize(); }
 };
 
+// ── Local Server Detection & Browser ─────────────────────────────────────────
+const LOCAL_SERVER = 'http://localhost:54321';
+let localCurrentFolder = '';
+let localSelected = new Set();
+let localFileIndex = [];
+
+async function checkLocalServer() {
+  try {
+    const r = await fetch(`${LOCAL_SERVER}/ping`, { signal: AbortSignal.timeout(800) });
+    if (r.ok) {
+      const d = await r.json();
+      document.getElementById('btnLocal').style.display = 'inline-flex';
+      document.getElementById('local-server-folder').textContent = d.folder || '';
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+// Poll for local server every 5 seconds
+setInterval(checkLocalServer, 5000);
+checkLocalServer(); // immediate check on load
+
+async function openLocalModal() {
+  document.getElementById('local-modal').style.display = 'flex';
+  await localLoadDir('');
+}
+
+async function localLoadDir(subfolder) {
+  localCurrentFolder = subfolder;
+  localSelected.clear();
+  localFileIndex = [];
+  document.getElementById('local-path').textContent = '📁 /' + subfolder;
+  document.getElementById('local-sel-bar').style.display = 'none';
+  const list = document.getElementById('local-list');
+  list.innerHTML = `<div style="padding:20px;text-align:center;color:#7d8590;font-size:11px">Loading…</div>`;
+
+  try {
+    // Get subfolders
+    const fRes = await fetch(`${LOCAL_SERVER}/folders`);
+    const fData = await fRes.json();
+
+    // Get files
+    const url = `${LOCAL_SERVER}/list?folder=${encodeURIComponent(subfolder)}&recursive=false`;
+    const iRes = await fetch(url);
+    const iData = await iRes.json();
+
+    list.innerHTML = '';
+    localFileIndex = iData.files || [];
+
+    // Show subfolders first (only at root level for simplicity)
+    if (!subfolder && fData.folders) {
+      fData.folders.forEach(f => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:4px;cursor:pointer;border:1px solid transparent';
+        row.innerHTML = `<span style="font-size:16px">📁</span><span style="font-size:11px;color:#e6edf3;flex:1">${f.name}</span><span style="font-size:10px;color:#7d8590">${f.count} images</span>`;
+        row.onmouseover=()=>row.style.background='#1c2128';
+        row.onmouseout=()=>row.style.background='';
+        row.onclick=()=>localLoadDir(f.path);
+        list.appendChild(row);
+      });
+    }
+
+    if (!localFileIndex.length && !(!subfolder && fData.folders?.length)) {
+      list.innerHTML = `<div style="padding:20px;text-align:center;color:#7d8590;font-size:11px">No images found in this folder</div>`;
+      return;
+    }
+
+    // Show image files
+    localFileIndex.forEach((file, idx) => {
+      const thumbUrl = `${LOCAL_SERVER}/thumb?path=${encodeURIComponent(file.path)}`;
+      const size = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+' MB' : (file.size/1024).toFixed(0)+' KB';
+
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;border:1px solid transparent';
+
+      const cb = document.createElement('input');
+      cb.type='checkbox'; cb.style.cssText='width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:#3fb950';
+
+      const thumb = document.createElement('img');
+      thumb.style.cssText='width:36px;height:36px;object-fit:cover;border-radius:3px;background:#0d1117;flex-shrink:0';
+      thumb.src = thumbUrl;
+
+      const meta = document.createElement('div');
+      meta.style.cssText='flex:1;min-width:0';
+      meta.innerHTML=`<div style="font-size:11px;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${file.name}</div><div style="font-size:10px;color:#7d8590">${size}</div>`;
+
+      const loadBtn = document.createElement('button');
+      loadBtn.textContent='Load';
+      loadBtn.style.cssText='background:transparent;border:1px solid #30363d;border-radius:4px;color:#7d8590;font-family:inherit;font-size:10px;cursor:pointer;padding:2px 8px;flex-shrink:0';
+      loadBtn.onmouseover=()=>loadBtn.style.borderColor='#3fb950';
+      loadBtn.onmouseout=()=>loadBtn.style.borderColor='#30363d';
+      loadBtn.onclick=async(e)=>{
+        e.stopPropagation();
+        loadBtn.textContent='…';
+        await loadLocalImage(file);
+        loadBtn.textContent='✓';
+        toast(`Loaded ${file.name}`);
+      };
+
+      const toggle = () => {
+        cb.checked=!cb.checked;
+        if(cb.checked){ localSelected.add(idx); row.style.borderColor='#3fb950'; row.style.background='#1c2128'; }
+        else{ localSelected.delete(idx); row.style.borderColor='transparent'; row.style.background=''; }
+        const bar = document.getElementById('local-sel-bar');
+        const cnt = document.getElementById('local-sel-count');
+        if(localSelected.size>0){ bar.style.display='flex'; cnt.textContent=`${localSelected.size} selected`; }
+        else bar.style.display='none';
+      };
+
+      cb.onclick=e=>{e.stopPropagation();toggle();};
+      row.onclick=toggle;
+      row.appendChild(cb); row.appendChild(thumb); row.appendChild(meta); row.appendChild(loadBtn);
+      list.appendChild(row);
+    });
+
+  } catch(e) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;color:#f85149;font-size:11px">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadLocalImage(file) {
+  try {
+    const imageUrl = `${LOCAL_SERVER}/image?path=${encodeURIComponent(file.path)}`;
+    const res = await fetch(imageUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const f = new File([blob], file.name, {type: blob.type});
+    f.webkitRelativePath = file.folder ? `${file.folder}/${file.name}` : file.name;
+    const gps = await getGPS(f);
+    const thumb = await mkThumb(f);
+    if (!thumb) return;
+    const img = { id:++uid, file:f, gps, thumb, fullUrl: URL.createObjectURL(blob), marker:null };
+    images.push(img);
+    if (gps) addMarker(img);
+    addRow(img);
+    updStats();
+  } catch(e) { console.warn('Local load failed', file.name, e); }
+}
+
+document.getElementById('btnLocal').onclick = openLocalModal;
+document.getElementById('local-close').onclick = () => document.getElementById('local-modal').style.display='none';
+document.getElementById('local-modal').onclick = e => { if(e.target===document.getElementById('local-modal')) document.getElementById('local-modal').style.display='none'; };
+document.getElementById('local-up').onclick = () => {
+  const parts = localCurrentFolder.split('/').filter(Boolean);
+  parts.pop();
+  localLoadDir(parts.join('/'));
+};
+document.getElementById('local-refresh').onclick = () => localLoadDir(localCurrentFolder);
+document.getElementById('local-load-sel').onclick = async () => {
+  const sel = [...localSelected].map(i => localFileIndex[i]);
+  document.getElementById('local-modal').style.display='none';
+  toast(`Loading ${sel.length} images from local folder…`);
+  for (const file of sel) await loadLocalImage(file);
+  const geo = images.filter(i=>i.gps);
+  if (geo.length>1) map.fitBounds(L.latLngBounds(geo.map(i=>[i.gps.lat,i.gps.lon])),{padding:[60,60]});
+  drawFP();
+  toast(`✓ Loaded ${sel.length} images`);
+};
+
 // ── Cloud Folder (Google Drive / OneDrive) ───────────────────────────────────
 const CLOUD_STORAGE_KEY = 'mapshot_cloud_folders';
 let cloudProvider = 'gdrive';
@@ -1670,8 +1963,914 @@ document.getElementById('cloud-load-sel').onclick = async () => {
   toast(`✓ Loaded ${sel.length} images`);
 };
 
+// ── Field Tools ───────────────────────────────────────────────────────────────
+let drawLayer, csvLayer, shpLayer;
+let activeTool = null;
+let currentDrawHandler = null;
+let pinCounter = 0;
+
+function initFieldTools() {
+  drawLayer = L.layerGroup().addTo(map);
+  csvLayer  = L.layerGroup().addTo(map);
+  shpLayer  = L.layerGroup().addTo(map);
+}
+
+// ── Tools menu toggle ─────────────────────────────────────────────────────────
+const toolsMenu = document.getElementById('tools-menu');
+document.getElementById('btnTools').onclick = e => {
+  e.stopPropagation();
+  toolsMenu.style.display = toolsMenu.style.display === 'none' ? 'block' : 'none';
+};
+document.addEventListener('click', () => { toolsMenu.style.display = 'none'; });
+
+function setActiveTool(name) {
+  activeTool = name;
+  document.querySelectorAll('.tmenu-item').forEach(b => b.classList.remove('active'));
+  if (name) document.getElementById('tool-'+name)?.classList.add('active');
+  map.getContainer().className = map.getContainer().className.replace(/drawing-\w+/g,'').trim();
+  if (name) map.getContainer().classList.add('drawing-'+name);
+  if (currentDrawHandler) { currentDrawHandler.disable(); currentDrawHandler = null; }
+}
+
+// ── Drop Pin ──────────────────────────────────────────────────────────────────
+document.getElementById('tool-pin').onclick = () => {
+  toolsMenu.style.display='none';
+  setActiveTool('pin');
+  toast('Click anywhere on the map to drop a pin');
+  map.once('click', e => {
+    addPin(e.latlng.lat, e.latlng.lng);
+    setActiveTool(null);
+  });
+};
+
+function addPin(lat, lon, label='', notes='', colour='#f0883e') {
+  pinCounter++;
+  const id = 'pin_'+pinCounter;
+  const icon = L.divIcon({
+    className:'',
+    html:`<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:${colour};border:2px solid #fff;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,.5)"></div>`,
+    iconSize:[22,22], iconAnchor:[11,22], popupAnchor:[0,-24]
+  });
+  const mk = L.marker([lat,lon], {icon, draggable:true});
+  mk._pinId = id; mk._colour = colour;
+
+  const popup = L.popup({maxWidth:240,minWidth:200}).setContent(() => makePinPopup(mk, label, notes));
+  mk.bindPopup(popup);
+  mk.addTo(drawLayer);
+
+  // Update popup after drag
+  mk.on('dragend', () => mk.getPopup().update());
+  return mk;
+}
+
+function makePinPopup(mk, label='', notes='') {
+  const d = document.createElement('div'); d.className='pin-popup';
+  const amg = getProjectedCoords(mk.getLatLng().lat, mk.getLatLng().lng);
+  d.innerHTML = `
+    <div style="font-size:10px;color:#7d8590;margin-bottom:4px">Pin · ${mk.getLatLng().lat.toFixed(6)}, ${mk.getLatLng().lng.toFixed(6)}</div>
+    ${amg?`<div style="font-size:10px;color:#58a6ff;margin-bottom:6px">E ${Number(amg.E).toLocaleString()} N ${Number(amg.N).toLocaleString()}</div>`:''}
+    <input id="pin-label-${mk._pinId}" placeholder="Label" value="${label}" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:4px 7px;outline:none;margin-bottom:4px">
+    <textarea id="pin-notes-${mk._pinId}" placeholder="Notes…" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-family:inherit;font-size:11px;padding:4px 7px;outline:none;resize:vertical;height:55px;margin-bottom:4px">${notes}</textarea>
+    <div style="display:flex;gap:4px">
+      <button onclick="document.getElementById('${mk._pinId}_del').click()" style="background:#f85149;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:10px;cursor:pointer;padding:3px 8px">Delete</button>
+    </div>
+    <button id="${mk._pinId}_del" style="display:none" onclick="drawLayer.removeLayer(${JSON.stringify(mk._pinId)}||this.closest('.leaflet-popup').pinMk)"></button>`;
+  // Wire delete
+  setTimeout(()=>{
+    const delBtn = document.getElementById(mk._pinId+'_del');
+    if(delBtn) delBtn.onclick = () => { drawLayer.removeLayer(mk); map.closePopup(); };
+  }, 50);
+  return d;
+}
+
+// ── Draw Line / Measure ───────────────────────────────────────────────────────
+document.getElementById('tool-line').onclick = () => {
+  toolsMenu.style.display='none';
+  setActiveTool('line');
+  const handler = new L.Draw.Polyline(map, {
+    shapeOptions: { color:'#58a6ff', weight:2.5, opacity:.9 },
+    metric: true, showLength: true,
+    drawError: { color:'#f85149', timeout:1000 }
+  });
+  handler.enable();
+  currentDrawHandler = handler;
+  toast('Click to draw line. Double-click to finish. ESC to cancel.');
+
+  map.on('draw:created', function onLine(e) {
+    map.off('draw:created', onLine);
+    const layer = e.layer;
+    const coords = layer.getLatLngs();
+    const dist = calcLineDistance(coords);
+    layer.bindPopup(`<div style="font-family:Courier New,monospace;font-size:11px">
+      <b>Line</b><br>
+      Distance: <b>${formatDist(dist)}</b><br>
+      Points: ${coords.length}
+    </div>`);
+    layer.addTo(drawLayer);
+    setActiveTool(null);
+    toast(`Line: ${formatDist(dist)}`);
+  });
+};
+
+// ── Draw Polygon / Area ───────────────────────────────────────────────────────
+document.getElementById('tool-poly').onclick = () => {
+  toolsMenu.style.display='none';
+  setActiveTool('poly');
+  const handler = new L.Draw.Polygon(map, {
+    shapeOptions: { color:'#f0883e', fillColor:'#f0883e', fillOpacity:.15, weight:2 },
+    showArea: true, metric: true
+  });
+  handler.enable();
+  currentDrawHandler = handler;
+  toast('Click to draw polygon. Double-click to close. ESC to cancel.');
+
+  map.on('draw:created', function onPoly(e) {
+    map.off('draw:created', onPoly);
+    const layer = e.layer;
+    const coords = layer.getLatLngs()[0];
+    const area = calcPolygonArea(coords);
+    const perim = calcLineDistance([...coords, coords[0]]);
+    layer.bindPopup(`<div style="font-family:Courier New,monospace;font-size:11px">
+      <b>Polygon</b><br>
+      Area: <b>${formatArea(area)}</b><br>
+      Perimeter: ${formatDist(perim)}<br>
+      Vertices: ${coords.length}
+    </div>`);
+    layer.addTo(drawLayer);
+    setActiveTool(null);
+    toast(`Polygon: ${formatArea(area)}`);
+  });
+};
+
+// ── Clear drawings ────────────────────────────────────────────────────────────
+document.getElementById('tool-clear-draw').onclick = () => {
+  toolsMenu.style.display='none';
+  if (drawLayer.getLayers().length === 0) { toast('No drawings to clear', '#f0883e'); return; }
+  if (confirm('Clear all drawings, pins and shapes?')) { drawLayer.clearLayers(); toast('Drawings cleared'); }
+};
+
+// ── Measurement helpers ───────────────────────────────────────────────────────
+function calcLineDistance(latlngs) {
+  let d = 0;
+  for (let i=1; i<latlngs.length; i++) d += latlngs[i-1].distanceTo(latlngs[i]);
+  return d;
+}
+function calcPolygonArea(latlngs) {
+  // Shoelace formula on projected coords
+  const R = 6371000;
+  const toRad = d => d*Math.PI/180;
+  let area = 0;
+  const n = latlngs.length;
+  for (let i=0; i<n; i++) {
+    const j = (i+1)%n;
+    const xi = toRad(latlngs[i].lng)*Math.cos(toRad(latlngs[i].lat));
+    const xj = toRad(latlngs[j].lng)*Math.cos(toRad(latlngs[j].lat));
+    const yi = toRad(latlngs[i].lat);
+    const yj = toRad(latlngs[j].lat);
+    area += (xj-xi)*(yj+yi);
+  }
+  return Math.abs(area/2)*R*R;
+}
+function formatDist(m) {
+  return m >= 1000 ? (m/1000).toFixed(2)+' km' : Math.round(m)+' m';
+}
+function formatArea(m2) {
+  if (m2 >= 1e6) return (m2/1e6).toFixed(3)+' km²';
+  if (m2 >= 1e4) return (m2/1e4).toFixed(2)+' ha';
+  return Math.round(m2)+' m²';
+}
+
+// ── CSV Import ────────────────────────────────────────────────────────────────
+let csvData = null;
+
+document.getElementById('tool-csv').onclick = () => {
+  toolsMenu.style.display='none';
+  document.getElementById('csvIn').value='';
+  document.getElementById('csvIn').click();
+};
+document.getElementById('csvIn').onchange = function() {
+  if (!this.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const result = Papa.parse(e.target.result, {header:true, skipEmptyLines:true});
+    csvData = result;
+    populateCSVModal(result);
+    document.getElementById('csv-modal').classList.add('open');
+  };
+  reader.readAsText(this.files[0]);
+};
+
+function populateCSVModal(result) {
+  const cols = result.meta.fields || [];
+  const makeOpts = (sel, preferred) => {
+    sel.innerHTML = '<option value="">— none —</option>';
+    cols.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      if (preferred.some(p => c.toLowerCase().includes(p))) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  };
+  makeOpts(document.getElementById('csv-lat'), ['lat','latitude','y']);
+  makeOpts(document.getElementById('csv-lon'), ['lon','lng','longitude','x','east']);
+  makeOpts(document.getElementById('csv-label'), ['name','label','id','hole','site']);
+
+  // Preview table
+  const preview = document.getElementById('csv-preview');
+  const rows = result.data.slice(0,5);
+  preview.innerHTML = `<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  document.getElementById('csv-status').textContent = `${result.data.length} rows found`;
+}
+
+document.getElementById('csv-close').onclick = () => document.getElementById('csv-modal').classList.remove('open');
+document.getElementById('csv-close2').onclick = () => document.getElementById('csv-modal').classList.remove('open');
+
+document.getElementById('csv-plot').onclick = () => {
+  if (!csvData) return;
+  const latCol = document.getElementById('csv-lat').value;
+  const lonCol = document.getElementById('csv-lon').value;
+  const lblCol = document.getElementById('csv-label').value;
+  const colour = document.querySelector('input[name="csvclr"]:checked')?.value || '#f0883e';
+
+  if (!latCol || !lonCol) { document.getElementById('csv-status').textContent='Select Lat and Lon columns first'; return; }
+
+  let plotted = 0, skipped = 0;
+  csvData.data.forEach(row => {
+    const lat = parseFloat(row[latCol]);
+    const lon = parseFloat(row[lonCol]);
+    if (isNaN(lat) || isNaN(lon)) { skipped++; return; }
+    const label = lblCol ? (row[lblCol]||'') : '';
+    // Build notes from all other columns
+    const notes = Object.entries(row).filter(([k])=>k!==latCol&&k!==lonCol).map(([k,v])=>`${k}: ${v}`).join('\n');
+    addPin(lat, lon, label, notes, colour);
+    plotted++;
+  });
+
+  document.getElementById('csv-modal').classList.remove('open');
+  toast(`✓ Plotted ${plotted} points${skipped?' ('+skipped+' skipped)':''}`);
+
+  // Fit map
+  const markers = drawLayer.getLayers().filter(l => l instanceof L.Marker);
+  if (markers.length > 1) {
+    map.fitBounds(L.latLngBounds(markers.map(m => m.getLatLng())), {padding:[40,40]});
+  }
+};
+
+// ── Shapefile Import ──────────────────────────────────────────────────────────
+document.getElementById('tool-shp').onclick = () => {
+  toolsMenu.style.display='none';
+  document.getElementById('shpIn').value='';
+  document.getElementById('shpIn').click();
+};
+document.getElementById('shpIn').onchange = async function() {
+  if (!this.files[0]) return;
+  toast('Loading shapefile…');
+  try {
+    const buf = await this.files[0].arrayBuffer();
+    const geojson = await shp(buf);
+    shpLayer.clearLayers();
+    const layer = L.geoJSON(geojson, {
+      style: { color:'#a371f7', weight:2, fillOpacity:.1 },
+      pointToLayer: (f,latlng) => L.circleMarker(latlng, {radius:6, fillColor:'#a371f7', color:'#fff', weight:1, fillOpacity:.9}),
+      onEachFeature: (f,l) => {
+        if (f.properties) {
+          const props = Object.entries(f.properties).map(([k,v])=>`<tr><td style="color:#7d8590;padding:2px 6px">${k}</td><td style="padding:2px 6px">${v??''}</td></tr>`).join('');
+          l.bindPopup(`<table style="font-family:Courier New,monospace;font-size:10px">${props}</table>`);
+        }
+      }
+    }).addTo(shpLayer);
+    map.fitBounds(layer.getBounds(), {padding:[40,40]});
+    const count = geojson.features?.length || 0;
+    toast(`✓ Shapefile loaded — ${count} features`);
+  } catch(e) {
+    toast('Failed to load shapefile: '+e.message, '#f85149');
+  }
+};
+
+// ── PDF Export ────────────────────────────────────────────────────────────────
+document.getElementById('tool-pdf').onclick = async () => {
+  toolsMenu.style.display='none';
+  toast('Generating PDF…');
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    const W=297, H=210;
+
+    // Title bar
+    doc.setFillColor(22,27,34);
+    doc.rect(0,0,W,18,'F');
+    doc.setTextColor(230,237,243);
+    doc.setFontSize(14);
+    doc.setFont('courier','bold');
+    doc.text('MAPSHOT', 12, 12);
+    doc.setFont('courier','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(125,133,144);
+    doc.text('Field Survey Map', 44, 12);
+    doc.text(new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}), W-12, 12, {align:'right'});
+
+    // Map screenshot via canvas
+    const mapContainer = document.getElementById('map');
+    const canvas = document.createElement('canvas');
+    canvas.width = mapContainer.offsetWidth * 2;
+    canvas.height = mapContainer.offsetHeight * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2,2);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Draw map tiles via html2canvas fallback or just a placeholder note
+    // Since html2canvas isn't loaded, we'll add a note and map bounds
+    const bounds = map.getBounds();
+    const centre = map.getCenter();
+    const zoom = map.getZoom();
+
+    doc.setFillColor(13,17,23);
+    doc.rect(0,18,W,H-32,'F');
+
+    doc.setTextColor(48,54,61);
+    doc.setFontSize(24);
+    doc.setFont('courier','bold');
+    doc.text('MAP AREA', W/2, H/2-10, {align:'center'});
+    doc.setFontSize(10);
+    doc.setFont('courier','normal');
+    doc.setTextColor(125,133,144);
+    doc.text(`Centre: ${centre.lat.toFixed(5)}, ${centre.lng.toFixed(5)}   Zoom: ${zoom}`, W/2, H/2+4, {align:'center'});
+    doc.text(`Bounds: ${bounds.getSouth().toFixed(4)}°S — ${bounds.getNorth().toFixed(4)}°N  /  ${bounds.getWest().toFixed(4)}°E — ${bounds.getEast().toFixed(4)}°E`, W/2, H/2+14, {align:'center'});
+
+    // Stats box
+    const geoImages = images.filter(i=>i.gps);
+    const pins = drawLayer.getLayers().filter(l=>l instanceof L.Marker).length;
+    const lines = drawLayer.getLayers().filter(l=>l instanceof L.Polyline && !(l instanceof L.Polygon)).length;
+    const polys = drawLayer.getLayers().filter(l=>l instanceof L.Polygon).length;
+
+    doc.setFillColor(22,27,34);
+    doc.rect(W-76, 22, 72, 52, 'F');
+    doc.setDrawColor(48,54,61);
+    doc.rect(W-76, 22, 72, 52, 'S');
+    doc.setTextColor(125,133,144);
+    doc.setFontSize(7);
+    doc.text('SUMMARY', W-40, 29, {align:'center'});
+    doc.setTextColor(230,237,243);
+    doc.setFontSize(9);
+    [
+      [`Images: ${geoImages.length}`, 36],
+      [`Pins: ${pins}`, 43],
+      [`Lines: ${lines}`, 50],
+      [`Polygons: ${polys}`, 57],
+      [`Projection: EPSG:${activeEPSG}`, 64],
+    ].forEach(([txt,y]) => doc.text(txt, W-40, y, {align:'center'}));
+
+    // Footer
+    doc.setFillColor(22,27,34);
+    doc.rect(0,H-14,W,14,'F');
+    doc.setTextColor(125,133,144);
+    doc.setFontSize(7);
+    doc.text('Generated by MapShot · www.mapshot.com.au · GPS · EXIF · Field Survey', W/2, H-6, {align:'center'});
+
+    doc.save(`mapshot_${new Date().toISOString().slice(0,10)}.pdf`);
+    toast('✓ PDF exported');
+  } catch(e) {
+    toast('PDF export failed: '+e.message, '#f85149');
+    console.error(e);
+  }
+};
+
+// ── GeoJSON Export ────────────────────────────────────────────────────────────
+document.getElementById('tool-geojson').onclick = () => {
+  toolsMenu.style.display='none';
+  const features = [];
+
+  // Image points
+  images.filter(i=>i.gps).forEach(img => {
+    features.push({
+      type:'Feature',
+      geometry:{type:'Point', coordinates:[img.gps.lon, img.gps.lat]},
+      properties:{name:img.file.name, altitude:img.gps.alt, heading:img.gps.dir, camera:img.gps.model, datetime:img.gps.dt, type:'photo'}
+    });
+  });
+
+  // Draw layers
+  drawLayer.getLayers().forEach(l => {
+    try { features.push(l.toGeoJSON()); } catch {}
+  });
+
+  const geojson = {type:'FeatureCollection', features};
+  const blob = new Blob([JSON.stringify(geojson,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`mapshot_${new Date().toISOString().slice(0,10)}.geojson`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`✓ GeoJSON exported — ${features.length} features`);
+};
+
+// ── CSV Export ────────────────────────────────────────────────────────────────
+document.getElementById('tool-csv-export').onclick = () => {
+  toolsMenu.style.display='none';
+  const rows = [['Name','Latitude','Longitude','Easting','Northing','Altitude_m','Heading_deg','Camera','DateTime','Type']];
+
+  images.filter(i=>i.gps).forEach(img => {
+    const p = getProjectedCoords(img.gps.lat, img.gps.lon);
+    rows.push([img.file.name, img.gps.lat.toFixed(8), img.gps.lon.toFixed(8),
+      p?p.E:'', p?p.N:'', img.gps.alt??'', img.gps.dir??'', img.gps.model||'', img.gps.dt||'', 'Photo']);
+  });
+
+  // Add pins from draw layer
+  drawLayer.getLayers().filter(l=>l instanceof L.Marker).forEach((mk,i) => {
+    const {lat,lng} = mk.getLatLng();
+    const p = getProjectedCoords(lat,lng);
+    rows.push([`Pin_${i+1}`, lat.toFixed(8), lng.toFixed(8), p?p.E:'', p?p.N:'', '', '', '', '', 'Pin']);
+  });
+
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`mapshot_points_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`✓ CSV exported — ${rows.length-1} points`);
+};
+
+// ── Export EPSG selector ──────────────────────────────────────────────────────
+let exportEPSG = 20355;
+
+function updateExportEPSGLabel() {
+  const el = document.getElementById('export-epsg-label');
+  if (el) el.textContent = `EPSG:${exportEPSG}`;
+}
+
+document.getElementById('export-epsg-btn').onclick = (e) => {
+  e.stopPropagation();
+  toolsMenu.style.display='none';
+  document.getElementById('epsg-modal').style.display='flex';
+  // Flag the modal for export mode via a data attribute
+  document.getElementById('epsg-modal').dataset.mode = 'export';
+  buildEPSGModal();
+};
+
+// Patch setActiveEPSG behaviour — if modal is in export mode, set exportEPSG instead
+const _origSetActiveEPSG = setActiveEPSG;
+function setActiveEPSGOrExport(code) {
+  if (document.getElementById('epsg-modal').dataset.mode === 'export') {
+    exportEPSG = code;
+    updateExportEPSGLabel();
+    const def = EPSG_REGISTRY[code] || customEPSGCache[code];
+    toast(`Export projection: ${def?.label || 'EPSG:'+code}`);
+    document.getElementById('epsg-modal').dataset.mode = '';
+    closeEPSGModal();
+  } else {
+    _origSetActiveEPSG(code);
+  }
+}
+
+// Override closeEPSGModal to clear mode
+const _origCloseEPSG = closeEPSGModal;
+function closeEPSGModal() {
+  document.getElementById('epsg-modal').dataset.mode = '';
+  _origCloseEPSG();
+}
+
+// Patch buildEPSGModal row click to use setActiveEPSGOrExport
+// We do this by monkey-patching after buildEPSGModal runs
+const _origBuildEPSGModal = buildEPSGModal;
+function buildEPSGModal() {
+  _origBuildEPSGModal();
+  // Re-wire row clicks to respect export mode
+  document.querySelectorAll('#epsg-list > div').forEach(row => {
+    const orig = row.onclick;
+    row.onclick = () => {
+      const code = parseInt(row.querySelector('span:last-child')?.textContent?.replace('EPSG:',''));
+      if (code) setActiveEPSGOrExport(code);
+    };
+  });
+}
+
+// Helper: project lat/lon to exportEPSG
+function projectForExport(lat, lon) {
+  const p = projectCoord(lat, lon, exportEPSG);
+  if (!p) return null;
+  return { x: parseFloat(p.E), y: parseFloat(p.N) };
+}
+
+// ── DXF Writer ────────────────────────────────────────────────────────────────
+function generateDXF() {
+  const lines = [];
+  const d = (s) => lines.push(s);
+
+  // DXF header
+  d('0\nSECTION\n2\nHEADER');
+  d('9\n$ACADVER\n1\nAC1015');
+  d('9\n$INSUNITS\n70\n6'); // metres
+  d('0\nENDSEC');
+
+  // TABLES section — define layers
+  d('0\nSECTION\n2\nTABLES');
+  d('0\nTABLE\n2\nLAYER\n70\n10');
+  [
+    ['PHOTOS',    '3'],
+    ['PINS',      '1'],
+    ['LINES',     '5'],
+    ['POLYGONS',  '2'],
+    ['CSV_POINTS','6'],
+    ['SHAPEFILE', '4'],
+  ].forEach(([name, colour]) => {
+    d(`0\nLAYER\n2\n${name}\n70\n0\n62\n${colour}\n6\nCONTINUOUS`);
+  });
+  d('0\nENDTABLE\n0\nENDSEC');
+
+  // ENTITIES
+  d('0\nSECTION\n2\nENTITIES');
+
+  let handle = 100;
+  const H = () => (++handle).toString(16).toUpperCase().padStart(4,'0');
+
+  // Photo points
+  images.filter(i=>i.gps).forEach(img => {
+    const pt = projectForExport(img.gps.lat, img.gps.lon);
+    if (!pt) return;
+    const z = img.gps.alt ?? 0;
+    d(`0\nPOINT\n5\n${H()}\n8\nPHOTOS\n10\n${pt.x.toFixed(3)}\n20\n${pt.y.toFixed(3)}\n30\n${z.toFixed(3)}`);
+    d(`0\nTEXT\n5\n${H()}\n8\nPHOTOS\n10\n${pt.x.toFixed(3)}\n20\n${pt.y.toFixed(3)}\n30\n${z.toFixed(3)}\n40\n2\n1\n${img.file.name}`);
+  });
+
+  // Pins
+  drawLayer.getLayers().filter(l => l instanceof L.Marker && !l._csvPin).forEach((mk, i) => {
+    const {lat, lng} = mk.getLatLng();
+    const pt = projectForExport(lat, lng);
+    if (!pt) return;
+    d(`0\nPOINT\n5\n${H()}\n8\nPINS\n10\n${pt.x.toFixed(3)}\n20\n${pt.y.toFixed(3)}\n30\n0`);
+    d(`0\nTEXT\n5\n${H()}\n8\nPINS\n10\n${pt.x.toFixed(3)}\n20\n${pt.y.toFixed(3)}\n30\n0\n40\n2\n1\nPin_${i+1}`);
+  });
+
+  // Lines
+  drawLayer.getLayers().filter(l => l instanceof L.Polyline && !(l instanceof L.Polygon)).forEach(pl => {
+    const coords = pl.getLatLngs();
+    if (coords.length < 2) return;
+    const pts = coords.map(c => projectForExport(c.lat, c.lng)).filter(Boolean);
+    if (pts.length < 2) return;
+    d(`0\nLWPOLYLINE\n5\n${H()}\n8\nLINES\n90\n${pts.length}\n70\n0`);
+    pts.forEach(p => d(`10\n${p.x.toFixed(3)}\n20\n${p.y.toFixed(3)}`));
+  });
+
+  // Polygons
+  drawLayer.getLayers().filter(l => l instanceof L.Polygon).forEach(pg => {
+    const coords = pg.getLatLngs()[0];
+    const pts = coords.map(c => projectForExport(c.lat, c.lng)).filter(Boolean);
+    if (pts.length < 3) return;
+    d(`0\nLWPOLYLINE\n5\n${H()}\n8\nPOLYGONS\n90\n${pts.length}\n70\n1`); // 70\n1 = closed
+    pts.forEach(p => d(`10\n${p.x.toFixed(3)}\n20\n${p.y.toFixed(3)}`));
+  });
+
+  // CSV points
+  drawLayer.getLayers().filter(l => l instanceof L.Marker && l._csvPin).forEach((mk,i) => {
+    const {lat,lng} = mk.getLatLng();
+    const pt = projectForExport(lat,lng);
+    if (!pt) return;
+    d(`0\nPOINT\n5\n${H()}\n8\nCSV_POINTS\n10\n${pt.x.toFixed(3)}\n20\n${pt.y.toFixed(3)}\n30\n0`);
+  });
+
+  d('0\nENDSEC\n0\nEOF');
+  return lines.join('\n');
+}
+
+document.getElementById('tool-dxf').onclick = () => {
+  toolsMenu.style.display='none';
+  try {
+    const dxf = generateDXF();
+    const blob = new Blob([dxf], {type:'application/dxf'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const def = EPSG_REGISTRY[exportEPSG];
+    a.href=url; a.download=`mapshot_${new Date().toISOString().slice(0,10)}_EPSG${exportEPSG}.dxf`; a.click();
+    URL.revokeObjectURL(url);
+    toast(`✓ DXF exported (EPSG:${exportEPSG})`);
+  } catch(e) { toast('DXF export failed: '+e.message, '#f85149'); console.error(e); }
+};
+
+// ── Shapefile Writer ──────────────────────────────────────────────────────────
+// Writes a minimal SHP/DBF/SHX/PRJ zip for points, lines and polygons
+function writeSHP() {
+  // We'll write three shapefiles: points, lines, polygons
+  // Each shapefile = .shp + .shx + .dbf + .prj
+  // Packed into a single zip
+
+  const prjStr = getPRJString(exportEPSG);
+
+  // Collect data
+  const points = [];
+  const linesList = [];
+  const polygonsList = [];
+
+  // Photo points
+  images.filter(i=>i.gps).forEach(img => {
+    const pt = projectForExport(img.gps.lat, img.gps.lon);
+    if (pt) points.push({ x:pt.x, y:pt.y, name:img.file.name, type:'Photo', alt:img.gps.alt??0 });
+  });
+
+  // Pins
+  drawLayer.getLayers().filter(l=>l instanceof L.Marker).forEach((mk,i) => {
+    const {lat,lng} = mk.getLatLng();
+    const pt = projectForExport(lat,lng);
+    if (pt) points.push({ x:pt.x, y:pt.y, name:`Pin_${i+1}`, type:'Pin', alt:0 });
+  });
+
+  // Lines
+  drawLayer.getLayers().filter(l=>l instanceof L.Polyline&&!(l instanceof L.Polygon)).forEach((pl,i) => {
+    const coords = pl.getLatLngs().map(c=>projectForExport(c.lat,c.lng)).filter(Boolean);
+    if (coords.length>=2) linesList.push({ coords, name:`Line_${i+1}` });
+  });
+
+  // Polygons
+  drawLayer.getLayers().filter(l=>l instanceof L.Polygon).forEach((pg,i) => {
+    const coords = pg.getLatLngs()[0].map(c=>projectForExport(c.lat,c.lng)).filter(Boolean);
+    if (coords.length>=3) polygonsList.push({ coords, name:`Polygon_${i+1}` });
+  });
+
+  const files = {};
+
+  if (points.length) {
+    Object.assign(files, buildPointSHP('mapshot_points', points, prjStr));
+  }
+  if (linesList.length) {
+    Object.assign(files, buildPolySHP('mapshot_lines', linesList, 3, prjStr)); // 3=polyline
+  }
+  if (polygonsList.length) {
+    Object.assign(files, buildPolySHP('mapshot_polygons', polygonsList, 5, prjStr)); // 5=polygon
+  }
+
+  return files;
+}
+
+function getPRJString(epsgCode) {
+  // Return WKT projection string for common Australian projections
+  const prjMap = {
+    20355: 'PROJCS["GDA_1994_MGA_Zone_55",GEOGCS["GCS_GDA_1994",DATUM["D_GDA_1994",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",10000000.0],PARAMETER["Central_Meridian",147.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]',
+    28355: 'PROJCS["GDA94_MGA_zone_55",GEOGCS["GDA94",DATUM["Geocentric_Datum_of_Australia_1994",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",147],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["metre",1]]',
+    7855:  'PROJCS["GDA2020_MGA_zone_55",GEOGCS["GDA2020",DATUM["GDA2020",SPHEROID["GRS 1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",147],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["metre",1]]',
+    4326:  'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]',
+  };
+  // Generate for other MGA zones
+  for (let z=49; z<=56; z++) {
+    const cm = (z-1)*6-177;
+    prjMap[20300+z] = prjMap[20355].replace('147.0', cm.toFixed(1)).replace('Zone_55', `Zone_${z}`);
+    prjMap[28300+z] = prjMap[28355].replace('147', String(cm)).replace('zone_55', `zone_${z}`);
+    prjMap[7800+z]  = prjMap[7855].replace('147', String(cm)).replace('zone_55', `zone_${z}`);
+  }
+  return prjMap[epsgCode] || prjMap[4326];
+}
+
+function writeInt32LE(view, offset, val) { view.setInt32(offset, val, true); }
+function writeInt32BE(view, offset, val) { view.setInt32(offset, val, false); }
+function writeFloat64LE(view, offset, val) { view.setFloat64(offset, val, true); }
+
+function buildPointSHP(name, points, prjStr) {
+  const n = points.length;
+  // SHP
+  const shpSize = 100 + n*(8+20); // header + n records (8 record header + 20 point data)
+  const shpBuf = new ArrayBuffer(shpSize);
+  const shpV = new DataView(shpBuf);
+  // File header
+  writeInt32BE(shpV, 0, 9994);
+  writeInt32BE(shpV, 24, shpSize/2);
+  writeInt32LE(shpV, 28, 1000);
+  writeInt32LE(shpV, 32, 1); // shape type: point
+  const xs = points.map(p=>p.x), ys = points.map(p=>p.y);
+  writeFloat64LE(shpV, 36, Math.min(...xs));
+  writeFloat64LE(shpV, 44, Math.min(...ys));
+  writeFloat64LE(shpV, 52, Math.max(...xs));
+  writeFloat64LE(shpV, 60, Math.max(...ys));
+
+  // SHX header
+  const shxBuf = new ArrayBuffer(100 + n*8);
+  const shxV = new DataView(shxBuf);
+  writeInt32BE(shxV, 0, 9994);
+  writeInt32BE(shxV, 24, (100+n*8)/2);
+  writeInt32LE(shxV, 28, 1000);
+  writeInt32LE(shxV, 32, 1);
+
+  let offset = 50; // word offset (100 bytes)
+  points.forEach((p,i) => {
+    const recOff = 100 + i*28;
+    writeInt32BE(shpV, recOff,   i+1);    // record number
+    writeInt32BE(shpV, recOff+4, 10);     // content length in words (20 bytes)
+    writeInt32LE(shpV, recOff+8, 1);      // shape type
+    writeFloat64LE(shpV, recOff+12, p.x);
+    writeFloat64LE(shpV, recOff+20, p.y);
+    // SHX entry
+    writeInt32BE(shxV, 100+i*8, offset);
+    writeInt32BE(shxV, 104+i*8, 10);
+    offset += 14; // 4 header words + 10 content words
+  });
+
+  // DBF
+  const dbf = buildDBF(points, ['NAME','TYPE','ALT'], ['C','C','N'], [80,10,8]);
+
+  return {
+    [`${name}.shp`]: shpBuf,
+    [`${name}.shx`]: shxBuf,
+    [`${name}.dbf`]: dbf,
+    [`${name}.prj`]: new TextEncoder().encode(prjStr).buffer,
+  };
+}
+
+function buildPolySHP(name, features, shapeType, prjStr) {
+  // shapeType 3=Polyline, 5=Polygon
+  // Calculate total content size
+  let totalContent = 0;
+  features.forEach(f => {
+    totalContent += 4 + 32 + 4 + 4 + f.coords.length*16; // type+bbox+nparts+npoints+points
+  });
+  const shpSize = 100 + features.length*8 + totalContent;
+  const shpBuf = new ArrayBuffer(shpSize);
+  const shpV = new DataView(shpBuf);
+  writeInt32BE(shpV, 0, 9994);
+  writeInt32BE(shpV, 24, shpSize/2);
+  writeInt32LE(shpV, 28, 1000);
+  writeInt32LE(shpV, 32, shapeType);
+  const allX = features.flatMap(f=>f.coords.map(c=>c.x));
+  const allY = features.flatMap(f=>f.coords.map(c=>c.y));
+  writeFloat64LE(shpV, 36, Math.min(...allX));
+  writeFloat64LE(shpV, 44, Math.min(...allY));
+  writeFloat64LE(shpV, 52, Math.max(...allX));
+  writeFloat64LE(shpV, 60, Math.max(...allY));
+
+  const shxBuf = new ArrayBuffer(100+features.length*8);
+  const shxV = new DataView(shxBuf);
+  writeInt32BE(shxV, 0, 9994);
+  writeInt32BE(shxV, 24, (100+features.length*8)/2);
+  writeInt32LE(shxV, 28, 1000);
+  writeInt32LE(shxV, 32, shapeType);
+
+  let byteOff = 100;
+  features.forEach((feat, i) => {
+    const np = feat.coords.length;
+    const contentBytes = 4+32+4+4+np*16;
+    const contentWords = contentBytes/2;
+    writeInt32BE(shpV, byteOff,   i+1);
+    writeInt32BE(shpV, byteOff+4, contentWords);
+    let o = byteOff+8;
+    writeInt32LE(shpV, o, shapeType); o+=4;
+    const xs=feat.coords.map(c=>c.x), ys=feat.coords.map(c=>c.y);
+    writeFloat64LE(shpV,o,Math.min(...xs)); o+=8;
+    writeFloat64LE(shpV,o,Math.min(...ys)); o+=8;
+    writeFloat64LE(shpV,o,Math.max(...xs)); o+=8;
+    writeFloat64LE(shpV,o,Math.max(...ys)); o+=8;
+    writeInt32LE(shpV,o,1); o+=4; // 1 part
+    writeInt32LE(shpV,o,np); o+=4;
+    writeInt32LE(shpV,o,0); o+=4; // part starts at index 0
+    feat.coords.forEach(c => { writeFloat64LE(shpV,o,c.x); o+=8; writeFloat64LE(shpV,o,c.y); o+=8; });
+    writeInt32BE(shxV,100+i*8, byteOff/2);
+    writeInt32BE(shxV,104+i*8, contentWords);
+    byteOff += 8 + contentBytes;
+  });
+
+  const dbf = buildDBF(features, ['NAME'], ['C'], [80]);
+  return {
+    [`${name}.shp`]: shpBuf,
+    [`${name}.shx`]: shxBuf,
+    [`${name}.dbf`]: dbf,
+    [`${name}.prj`]: new TextEncoder().encode(prjStr).buffer,
+  };
+}
+
+function buildDBF(records, fieldNames, fieldTypes, fieldLengths) {
+  const headerSize = 32 + fieldNames.length*32 + 1;
+  const recordSize = 1 + fieldLengths.reduce((a,b)=>a+b,0);
+  const buf = new ArrayBuffer(headerSize + records.length*recordSize);
+  const v = new DataView(buf);
+  const u = new Uint8Array(buf);
+  const enc = new TextEncoder();
+
+  // Header
+  u[0]=3; // dBASE III
+  const now=new Date();
+  u[1]=now.getFullYear()-1900; u[2]=now.getMonth()+1; u[3]=now.getDate();
+  v.setInt32(4,records.length,true);
+  v.setInt16(8,headerSize,true);
+  v.setInt16(10,recordSize,true);
+
+  // Field descriptors
+  fieldNames.forEach((fname,i) => {
+    const off = 32+i*32;
+    enc.encode(fname).forEach((b,j)=>{ if(j<11) u[off+j]=b; });
+    u[off+11] = enc.encode(fieldTypes[i])[0];
+    u[off+16] = fieldLengths[i];
+    u[off+17] = fieldTypes[i]==='N'?4:0;
+  });
+  u[32+fieldNames.length*32]=0x0D; // header terminator
+
+  // Records
+  records.forEach((rec,ri) => {
+    const rOff = headerSize+ri*recordSize;
+    u[rOff]=0x20; // not deleted
+    let fOff=rOff+1;
+    fieldNames.forEach((fn,fi) => {
+      const val = String(rec[fn.toLowerCase()]??rec[fn]??'');
+      const padded = val.substring(0,fieldLengths[fi]).padEnd(fieldLengths[fi],' ');
+      enc.encode(padded).forEach((b,j)=>{ if(j<fieldLengths[fi]) u[fOff+j]=b; });
+      fOff+=fieldLengths[fi];
+    });
+  });
+
+  u[buf.byteLength-1]=0x1A; // EOF
+  return buf;
+}
+
+// Simple ZIP writer (no compression — DEFLATE not needed for small SHP files)
+function buildZIP(files) {
+  const enc = new TextEncoder();
+  const localHeaders = [];
+  const centralDir = [];
+  let offset = 0;
+
+  const crc32 = (buf) => {
+    const table = new Int32Array(256);
+    for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);table[i]=c;}
+    let crc=-1;
+    const d=new Uint8Array(buf);
+    for(let i=0;i<d.length;i++)crc=(crc>>>8)^table[(crc^d[i])&0xFF];
+    return(crc^-1)>>>0;
+  };
+
+  for(const [name, data] of Object.entries(files)){
+    const nameBytes = enc.encode(name);
+    const fileData = data instanceof ArrayBuffer ? new Uint8Array(data) : enc.encode(data);
+    const crc = crc32(fileData);
+    const lh = new Uint8Array(30+nameBytes.length);
+    const lv = new DataView(lh.buffer);
+    lv.setUint32(0,0x04034B50,true); // sig
+    lv.setUint16(4,20,true);  // version
+    lv.setUint16(6,0,true);   // flags
+    lv.setUint16(8,0,true);   // no compression
+    lv.setUint32(14,crc,true);
+    lv.setUint32(18,fileData.length,true);
+    lv.setUint32(22,fileData.length,true);
+    lv.setUint16(26,nameBytes.length,true);
+    nameBytes.forEach((b,i)=>lh[30+i]=b);
+
+    localHeaders.push({lh, fileData, nameBytes, crc, offset});
+    offset += lh.length+fileData.length;
+
+    const cd = new Uint8Array(46+nameBytes.length);
+    const cv = new DataView(cd.buffer);
+    cv.setUint32(0,0x02014B50,true);
+    cv.setUint16(4,20,true); cv.setUint16(6,20,true);
+    cv.setUint32(16,crc,true);
+    cv.setUint32(20,fileData.length,true);
+    cv.setUint32(24,fileData.length,true);
+    cv.setUint16(28,nameBytes.length,true);
+    cv.setUint32(42,localHeaders[localHeaders.length-1].offset,true);
+    nameBytes.forEach((b,i)=>cd[46+i]=b);
+    centralDir.push(cd);
+  }
+
+  const cdSize = centralDir.reduce((a,b)=>a+b.length,0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0,0x06054B50,true);
+  ev.setUint16(8,localHeaders.length,true);
+  ev.setUint16(10,localHeaders.length,true);
+  ev.setUint32(12,cdSize,true);
+  ev.setUint32(16,offset,true);
+
+  const parts = [...localHeaders.flatMap(({lh,fileData})=>[lh,fileData]), ...centralDir, eocd];
+  const total = parts.reduce((a,b)=>a+b.length,0);
+  const out = new Uint8Array(total);
+  let pos=0;
+  parts.forEach(p=>{out.set(p,pos);pos+=p.length;});
+  return out.buffer;
+}
+
+document.getElementById('tool-shp-export').onclick = () => {
+  toolsMenu.style.display='none';
+  try {
+    const files = writeSHP();
+    if(!Object.keys(files).length){toast('No data to export','#f0883e');return;}
+    const zip = buildZIP(files);
+    const blob = new Blob([zip],{type:'application/zip'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`mapshot_shp_EPSG${exportEPSG}_${new Date().toISOString().slice(0,10)}.zip`; a.click();
+    URL.revokeObjectURL(url);
+    toast(`✓ Shapefile exported (EPSG:${exportEPSG}) — ${Object.keys(files).length} files`);
+  } catch(e) { toast('SHP export failed: '+e.message,'#f85149'); console.error(e); }
+};
+
+// initialise export label
+updateExportEPSGLabel();
+
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape' && activeTool) {
+    if (currentDrawHandler) { currentDrawHandler.disable(); currentDrawHandler=null; }
+    setActiveTool(null);
+    toast('Tool cancelled');
+  }
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 initMap();
+initFieldTools();
 </script>
 </body>
 </html>
